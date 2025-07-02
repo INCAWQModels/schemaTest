@@ -1,16 +1,21 @@
 {
-    "catchment": { "$ref": "#/defs/header" },
+    "catchment": { 
+        "$ref": "#/defs/header" 
+    },
     "HRU": {
         "type": "array",
-        "items": { "$ref": "#/defs/header" }
+        "items": { "$ref": "#/defs/header" },
+        "minItems": 1
     },
     "landCoverType": {
         "type": "array",
-        "items": { "$ref": "#/defs/header" }
+        "items": { "$ref": "#/defs/header" },
+        "minItems": 1
     },
     "bucket": {
         "type": "array",
-        "items": { "$ref": "#/defs/header" }
+        "items": { "$ref": "#/defs/header" },
+        "minItems": 1
     },
     "grainSizeClass": {
         "type": "array",
