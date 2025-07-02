@@ -1,0 +1,111 @@
+    {
+        "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/landCover.json",
+        "$schema": "https://json-schema.org/draft-07/schema#",
+        "title": "Land Cover Type",
+        "description": "information about land cover types",
+        "type": "object",
+        "properties": {
+            "name":         { "type": "string",
+                "default": "Land Cover"  },
+            "abbreviation": { "type": "string",
+                "default": "LC"  },
+            "rainfallMultiplier": {
+                "type": "number",
+                "description": "multiplier to apply to precipitation when temperature is above snowfall temperature",
+                "default": 1.0,
+                "minimum": 0.0
+            },
+            "snowfallMultiplier": {
+                "type": "number",
+                "description": "multiplier to apply to precipitation when temperature is at or below snowfall temperature",
+                "default": 1.0,
+                "minimum": 0.0
+            },
+            "evaporation": {
+                "type": "object",
+                "properties": {
+                    "canopyInterception": {
+                        "type": "number",
+                        "description": "the depth of precipitation intercepted by the canopy and evaporated or sublimated befpre reaching the ground surface",
+                        "default": 0.0,
+                        "minimum": 0.0
+                    },
+                    "growingDegreeOffset": {
+                        "type": "number",
+                        "description": "temperature offset for when evapotranspiration starts",
+                        "minimum": -20.0,
+                        "maximum": 20.0,
+                        "default": 0.0
+                    },
+                    "solarRadiationScalingFactor": {
+                        "type": "number",
+                        "description": "scaling factor for estimating evaporation from solar radiation",
+                        "minimum": 20.0,
+                        "maximum": 200.0,
+                        "default": 60.0
+                    }
+                }
+            },
+            "snowpack": {
+                "type": "object",
+                "properties": {
+                    "depth": {
+                        "type": "number",
+                        "description": "Depth of the snowpack in snow water equivalents (SWE)",
+                        "minimum": 0.0,
+                        "maximum": 10000.0,
+                        "default": 0.0
+                    },
+                    "meltTemperature": {
+                        "type": "number",
+                        "description": "Temperature in degrees celcius above which snowmelt occurs",
+                        "minimum": -10.0,
+                        "maximum": 10.0,
+                        "default": 0.0
+                    },
+                    "degreeDayMeltRate": {
+                        "type": "number",
+                        "description": "The rate in mm SWE / degree /day at which ths snowpack melts",
+                        "minimum": 0.1,
+                        "maximum": 10.0,
+                        "default": 3.0
+                    }
+                }
+            },
+            "soilTemperature": {
+                "type": "object",
+                "properties": {
+                    "thermalConductivity": {
+                        "type": "number",
+                        "description": "soil heat transfer capacity, W/m/oC",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 0.7
+                    },
+                    "specificHeatFreezeThaw": {
+                        "type": "number",
+                        "description": "specific heat capacity associated with freeze / thaw, J/m3/oC",
+                        "minimum": 0.0,
+                        "maximum": 10.0,
+                        "default": 6.6
+                    },
+                    "snowDepthFactor": {
+                        "type": "number",
+                        "description": "temperature change attenuation associated with snowpack",
+                        "minimum": -5.0,
+                        "maximum": 0.0,
+                        "default": -0.25
+                    }
+                }
+            },
+            "buckets": {
+                "type": "array",
+                "items": {
+                    "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/bucket.json" 
+                }
+            },
+            "soils": {
+                "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/landCoverSoils.json" 
+            }
+        }
+    }

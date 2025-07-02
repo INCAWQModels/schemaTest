@@ -1,0 +1,11 @@
+{
+    "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/generic.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Generic json schema",
+    "description": "generic header file for creating JSON schemas",
+    "type": "object",
+    "properties": {
+        "name":         { "type": "string"  },
+        "abbreviation": { "type": "string"  }
+    }
+}

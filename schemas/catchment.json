@@ -1,0 +1,19 @@
+    {
+        "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/catchment.json",
+        "$schema": "https://json-schema.org/draft-07/schema#",
+        "title": "Catchment",
+        "description": "information about model-independent catchment properties",
+        "type": "object",
+        "properties": {
+            "name":         { "type": "string",
+                "default": "New Catchment"  },
+            "abbreviation": { "type": "string",
+                "default": "NC"  },
+            "HRUs": {
+                "type": "array",
+                "items": {
+                    "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/HRU.json" 
+                }
+            }
+        }
+    }

@@ -1,0 +1,32 @@
+{
+    "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/HRU.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Hydrological Response Unit (HRU)",
+    "description": "information about HRU parameters",
+    "type": "object",
+    "properties": {
+        "name":         { "type": "string",
+            "default": "New Hydrological Response Unit"  },
+        "abbreviation": { "type": "string",
+            "default": "HRU"  },
+        "coordinates": {
+            "type": "object",
+            "decimalLatitude": {
+                "type": "number",
+                "description": "Decimal latitude, north positive",
+                "minimum": -90.0,
+                "maximum": 90.0,
+                "default": 45.0
+            },
+            "decimalLongitude": {
+                "type": "number",
+                "description": "Decimal longitude, west positive",
+                "minimum": -180.0,
+                "maximum": 180.0,
+                "default": -15.0
+            }
+        },
+        "subcatchment": { "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/subcatchment.json" },
+        "reach": { "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/reach.json" }
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/particleSizeClass.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Particle Size Class propoerties",
+    "description": "properties for a particle (grain) size class",
+    "type": "object",
+    "properties": {
+        "name":         { "type": "string"  },
+        "abbreviation": { "type": "string"  },
+        "dimensions": {
+            "type": "object",
+            "description": "minimum and maximum mesh size for sieving particles",
+            "minimumSize": {
+                "type": "number",
+                "description": "minimum mesh size, in millimetres, that will retain a particle",
+                "minimum": 0.0,
+                "default": 1.0
+            },
+             "maximumSize": {
+                "type": "number",
+                "description": "maximum mesh size, in millimetres, that will retain a particle",
+                "minimum": 0.0,
+                "default": 1.0
+            }
+        },
+        "density": {
+            "type": "number",
+            "description": "The average desity of a particle in tonnes/m3 (or kg/l)",
+            "minimum": 0.01,
+            "maximum": 10.0,
+            "default": 2.65
+        },
+        "mass": {
+            "type": "number",
+            "description": "The msass of particles per unit area, kg/m2)",
+            "minimum": 1.0e-10,
+            "maximum": 1.0e+10,
+            "default": 1.0e+01
+        }
+    }
+}

@@ -1,0 +1,78 @@
+{
+    "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/reach.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Reach Properties",
+    "description": "generic properties for riverine part of an HRU",
+    "type": "object",
+    "required": ["Manning"],
+    "properties": {
+        "flow":{
+                "type": "number",
+                "description": "Current flow through the outflow, m3/s",
+                "minimum": 0.0,
+                "maximum": 1.0e+07,
+                "default": 1.0},  
+        "dimensions": {
+            "type": "object",
+            "description": "idealised reach properties",
+            "required": ["length","widthAtSedimentSurface","slope"],
+            "length":{
+                "type": "number",
+                "description": "Idealised reach length in metres",
+                "minimum": 1.0,
+                "maximum": 1000000.0,
+                "default": 100.0}, 
+            "widthAtSedimentSurface":{
+                "type": "number",
+                "description": "Idealised reach width at bottom of channel in metres",
+                "minimum": 0.1,
+                "maximum": 1000.0,
+                "default": 1.0},  
+            "slope":{
+                "type": "number",
+                "description": "Idealised channel slope, dimensionless",
+                "minimum": 1.0e-10,
+                "maximum": 1.0e-02,
+                "default": 10e-05}        
+        },
+        "particleSizeClasses": {
+                "type": "array",
+                "items": {
+                    "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/particleSizeClass.json" 
+                }
+            },
+         "Manning":     {
+            "type": "object",
+            "description": "Parameters for Manning stream flow equaiton",
+            "required": ["a", "b", "c", "f", "n"],
+            "properties": {
+                "a": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 9.99,
+                    "default": 2.71},
+                "b": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 0.99,
+                    "default": 0.557},
+                "c": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 9.99,
+                    "default": 0.349},
+                "f": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 0.99,
+                    "default": 0.341},
+                "n": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 0.3,
+                    "default": 0.1
+                }
+            }  
+        }
+    }
+}

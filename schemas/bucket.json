@@ -1,0 +1,124 @@
+{
+    "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/bucket.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Bucket Properties",
+    "description": "generic bucket properties for water routing",
+    "type": "object",
+    "properties": {
+        "name":         { "type": "string"  },
+        "abbreviation": { "type": "string"  },
+        "receivesPrecipitation": {
+            "type": "boolean",
+            "default": "false",
+            "description": "A flag indicating whether or not a bucket is at the soil surface"
+        },
+        "useInSMDCalculation": {
+            "type": "boolean",
+            "default": "false",
+            "description": "A flag indicating whether or not a bucket is to be used in soil moisture deficit calculations"
+        },
+        "relativeAreaIndex": {
+            "type": "number",
+            "description": "the fractional coverage of a bucket within a land cover type",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 1.0
+        },
+        "maximumInfiltration": {
+            "type": "number",
+            "description": "the maximum depth of water that can infiltrate in one day in millimetres",
+            "minimum": 0.0,
+            "maximum": 1000.0,
+            "default": 100.0
+        },
+        "droughtRunoffFraction": {
+            "type": "number",
+            "description": "the proportion of incoming water that contributes to runoff regardless of antecedent water depth in the bucket",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.0
+        },
+        "characteristicTimeConstant": {
+            "type": "number",
+            "description": "the denominator of the fractional drainage amount during one day",
+            "minimum": 0.001,
+            "maximum": 1000.0,
+            "default": 10.0
+        },
+        "evaporation": {
+            "type": "object",
+            "properties": {
+                "droughtAdjustment": {
+                    "type": "number",
+                    "description": "exponent for slowing evaporation as soil dries out",
+                    "minimum": 0.0,
+                    "maximum": 10.0,
+                    "default": 1.0
+                },
+                "relativeAmountIndex": {
+                    "type": "number",
+                    "description": "proportion of evaporaiton associated wit hte bucket",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "default": 0.0
+                }
+            }
+        },
+        "soilTemperature": {
+             "type": "object",
+            "properties": {
+                "curentTemperature": {
+                    "type": "number",
+                    "description": "soil temperature in bucket, degrees C",
+                    "minimum": -20.0,
+                    "maximum": 50.0,
+                    "default": 5.0
+                },
+                "effectiveDepth": {
+                    "type": "number",
+                    "description": "effective depth for soil heat transfer calculations in metres",
+                    "minimum": 0.0,
+                    "maximum": 10.0,
+                    "default": 0.2
+                },
+                "infiltrationThresholdTemperature": {
+                    "type": "number",
+                    "description": "soil temperature below which infiltration stops",
+                    "minimum": -20.0,
+                    "maximum": 20.0,
+                    "default": 0.0
+                }
+            }
+        },
+        "waterDepth": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "default": 1.0,
+                    "description": "The current water depth in millimetres"
+                },
+                "tightlyBound": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "description": "The depth of water in the bucket that does not contribute to either evaporation or runoff in millimetres",
+                    "default": 100.0
+                },
+                "plantAvailable": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "description": "The depth of water in the bucket that can contribute to evaporation but not runoff in millimetres",
+                    "default": 200.0
+                },
+                "freelyDraining": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "description": "The depth of water in the bucket that can contribute to evaporation but not runoff in millimetres",
+                    "default": 700.0
+                }
+            }
+        }
+    },
+    "required": ["name", "abbreviation","receivesPrecipitation"]
+}

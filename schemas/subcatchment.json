@@ -1,0 +1,44 @@
+    {
+        "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/subcatchment.json",
+        "$schema": "https://json-schema.org/draft-07/schema#",
+        "title": "Subcatchment",
+        "description": "information about a subcatchment",
+        "type": "object",
+        "properties": {
+            "landCoverTypes": {
+                "type": "array",
+                "items": {
+                    "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/landCover.json" 
+                }
+            },
+            "particleSizeClasses": {
+                "type": "array",
+                "items": {
+                    "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/particleSizeClass.json" 
+                }
+            },
+            "precipitationAdjustments": {
+                "type": "object",
+                "description": "subcatchment level precipitaiton adjustments",
+                "properties": {
+                    "rainfallMultiplier": {
+                        "type": "number",
+                        "description": "multiplier to apply to precipitation when temperature is above snowfall temperature",
+                        "default": 1.0,
+                        "minimum": 0.0
+                    },
+                    "snowfallMultiplier": {
+                        "type": "number",
+                        "description": "multiplier to apply to precipitation when temperature is at or below snowfall temperature",
+                        "default": 1.0,
+                        "minimum": 0.0
+                    },
+                    "snowOffset": {
+                        "type": "number",
+                        "description": "temperature offset for snow fall and melt",
+                        "default": 0.0
+                    }
+                }
+            }
+        }
+    }

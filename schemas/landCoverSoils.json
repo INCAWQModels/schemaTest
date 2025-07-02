@@ -1,0 +1,53 @@
+{
+    "$id": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/landCoverSoils.json",
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "title": "Terrestrial soil properties",
+    "description": "land cover specific soil properties",
+    "type": "object",
+    "properties": {
+        "name":         { "type": "string"  },
+        "abbreviation": { "type": "string"  },
+        "particleSizeClasses": {
+                "type": "array",
+                "items": {
+                    "$ref":  "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/particleSizeClass.json",
+                    "parameters": {"$ref": "#/$defs/parameterDefinitions"} 
+                }
+            }
+    },
+    "$defs": {
+        "parameterDefinitions": {
+            "type": "object",
+            "properties": {
+                "vegetationIndex": {
+                    "type": "number",
+                    "description": "A value ranging from 0 (no) to 10 (complete) vegetation cover",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "default": 10
+                },
+                "splashDetachmentE": {
+                    "type": "number",
+                    "description": "splash detachment factor, kg/m2/s (*check units)",
+                    "minimum": 0,
+                    "maximum": 1.0e+06,
+                    "default": 0.1
+                },
+                "flowErosionE": {
+                    "type": "number",
+                    "description": "flow erosion factor, kg/km2/s (*check units)",
+                    "minimum": 0,
+                    "maximum": 1.0e+06,
+                    "default": 0.1
+                },
+                "splashDetachmentA": {
+                    "type": "number",
+                    "description": "splash detachment factor, s/m (*check units)",
+                    "minimum": 0,
+                    "maximum": 1.0e+06,
+                    "default": 1.0
+                }
+            }
+        }
+    } 
+}
