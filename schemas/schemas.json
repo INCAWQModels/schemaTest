@@ -1,0 +1,10 @@
+{
+    "bucket": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/bucket.json",
+    "catchment": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/catchment.json",
+    "HRU": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/HRU.json",
+    "landCoverType": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/landCover.json",
+    "particleSizeClass": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/particleSizeClass.json",
+    "reach": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/reach.json"
+}
+    
+ 

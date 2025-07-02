@@ -3,6 +3,41 @@ from tkinter import ttk, messagebox, filedialog
 import json
 from typing import Dict, List, Any
 
+class ToolTip:
+    """Create a tooltip for a given widget"""
+    def __init__(self, widget, text='widget info'):
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.tipwindow = None
+        
+    def enter(self, event=None):
+        self.showtip()
+        
+    def leave(self, event=None):
+        self.hidetip()
+        
+    def showtip(self):
+        if self.tipwindow or not self.text:
+            return
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 25
+        y = y + cy + self.widget.winfo_rooty() + 25
+        self.tipwindow = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry("+%d+%d" % (x, y))
+        label = tk.Label(tw, text=self.text, justify=tk.LEFT,
+                        background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                        font=("tahoma", "8", "normal"), wraplength=300)
+        label.pack(ipadx=1)
+        
+    def hidetip(self):
+        tw = self.tipwindow
+        self.tipwindow = None
+        if tw:
+            tw.destroy()
+
 class JSONGeneratorApp:
     def __init__(self, root):
         self.root = root
@@ -16,6 +51,22 @@ class JSONGeneratorApp:
             "landCoverType": [],
             "bucket": [],
             "grainSizeClass": []
+        }
+        
+        # Schema-based help text
+        self.help_texts = {
+            "catchment_name": "Name for the catchment (e.g., 'Thames Basin')",
+            "catchment_abbrev": "Short abbreviation for the catchment (e.g., 'TB')",
+            "hru_name": "Name for the Hydrological Response Unit",
+            "hru_abbrev": "Short abbreviation for the HRU",
+            "landcover_name": "Name for the land cover type (e.g., 'Forest', 'Urban')",
+            "landcover_abbrev": "Short abbreviation for the land cover type",
+            "bucket_name": "Name for the water routing bucket",
+            "bucket_abbrev": "Short abbreviation for the bucket",
+            "grain_name": "Name for the particle size class (e.g., 'Sand', 'Clay')",
+            "grain_abbrev": "Short abbreviation for the grain size class",
+            "grain_min_size": "Minimum mesh size, in millimetres, that will retain a particle (minimum: 0.0, default: 1.0)",
+            "grain_max_size": "Maximum mesh size, in millimetres, that will retain a particle (minimum: 0.0, default: 1.0)"
         }
         
         self.create_widgets()
@@ -51,19 +102,34 @@ class JSONGeneratorApp:
         title_label = ttk.Label(frame, text="Catchment Information", font=("Arial", 14, "bold"))
         title_label.pack(pady=10)
         
+        # Help info
+        help_frame = ttk.Frame(frame)
+        help_frame.pack(pady=5)
+        help_label = ttk.Label(help_frame, text="ℹ️ Hover over fields for help", 
+                              font=("Arial", 9), foreground="blue")
+        help_label.pack()
+        
         # Input frame
         input_frame = ttk.Frame(frame)
         input_frame.pack(pady=20)
         
         # Name field
-        ttk.Label(input_frame, text="Name:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        name_label = ttk.Label(input_frame, text="Name:")
+        name_label.grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ToolTip(name_label, self.help_texts["catchment_name"])
+        
         self.catchment_name = ttk.Entry(input_frame, width=40)
         self.catchment_name.grid(row=0, column=1, padx=5, pady=5)
+        ToolTip(self.catchment_name, self.help_texts["catchment_name"])
         
         # Abbreviation field
-        ttk.Label(input_frame, text="Abbreviation:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        abbrev_label = ttk.Label(input_frame, text="Abbreviation:")
+        abbrev_label.grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        ToolTip(abbrev_label, self.help_texts["catchment_abbrev"])
+        
         self.catchment_abbrev = ttk.Entry(input_frame, width=40)
         self.catchment_abbrev.grid(row=1, column=1, padx=5, pady=5)
+        ToolTip(self.catchment_abbrev, self.help_texts["catchment_abbrev"])
         
     def create_array_tab(self, notebook, tab_name, data_key):
         frame = ttk.Frame(notebook)
@@ -73,17 +139,44 @@ class JSONGeneratorApp:
         title_label = ttk.Label(frame, text=f"{tab_name} Management", font=("Arial", 14, "bold"))
         title_label.pack(pady=10)
         
+        # Help info
+        help_frame = ttk.Frame(frame)
+        help_frame.pack(pady=5)
+        help_label = ttk.Label(help_frame, text="ℹ️ Hover over fields for help", 
+                              font=("Arial", 9), foreground="blue")
+        help_label.pack()
+        
         # Input frame
         input_frame = ttk.Frame(frame)
         input_frame.pack(pady=10)
         
-        ttk.Label(input_frame, text="Name:").grid(row=0, column=0, sticky="w", padx=5)
+        # Get help text keys based on data_key
+        name_help_key = f"{data_key.lower()}_name" if data_key.lower() in ["hru", "landcovertype"] else f"{data_key}_name"
+        abbrev_help_key = f"{data_key.lower()}_abbrev" if data_key.lower() in ["hru", "landcovertype"] else f"{data_key}_abbrev"
+        
+        # Adjust for landCoverType
+        if data_key == "landCoverType":
+            name_help_key = "landcover_name"
+            abbrev_help_key = "landcover_abbrev"
+        elif data_key == "HRU":
+            name_help_key = "hru_name"
+            abbrev_help_key = "hru_abbrev"
+        
+        name_label = ttk.Label(input_frame, text="Name:")
+        name_label.grid(row=0, column=0, sticky="w", padx=5)
+        ToolTip(name_label, self.help_texts.get(name_help_key, "Name for this item"))
+        
         name_entry = ttk.Entry(input_frame, width=30)
         name_entry.grid(row=0, column=1, padx=5)
+        ToolTip(name_entry, self.help_texts.get(name_help_key, "Name for this item"))
         
-        ttk.Label(input_frame, text="Abbreviation:").grid(row=0, column=2, sticky="w", padx=5)
+        abbrev_label = ttk.Label(input_frame, text="Abbreviation:")
+        abbrev_label.grid(row=0, column=2, sticky="w", padx=5)
+        ToolTip(abbrev_label, self.help_texts.get(abbrev_help_key, "Abbreviation for this item"))
+        
         abbrev_entry = ttk.Entry(input_frame, width=15)
         abbrev_entry.grid(row=0, column=3, padx=5)
+        ToolTip(abbrev_entry, self.help_texts.get(abbrev_help_key, "Abbreviation for this item"))
         
         def add_item():
             name = name_entry.get().strip()
@@ -136,29 +229,52 @@ class JSONGeneratorApp:
         title_label = ttk.Label(frame, text="Grain Size Class Management", font=("Arial", 14, "bold"))
         title_label.pack(pady=10)
         
+        # Help info
+        help_frame = ttk.Frame(frame)
+        help_frame.pack(pady=5)
+        help_label = ttk.Label(help_frame, text="ℹ️ Hover over fields for help", 
+                              font=("Arial", 9), foreground="blue")
+        help_label.pack()
+        
         # Input frame
         input_frame = ttk.Frame(frame)
         input_frame.pack(pady=10)
         
         # Row 0: Name and Abbreviation
-        ttk.Label(input_frame, text="Name:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
+        name_label = ttk.Label(input_frame, text="Name:")
+        name_label.grid(row=0, column=0, sticky="w", padx=5, pady=2)
+        ToolTip(name_label, self.help_texts["grain_name"])
+        
         name_entry = ttk.Entry(input_frame, width=25)
         name_entry.grid(row=0, column=1, padx=5, pady=2)
+        ToolTip(name_entry, self.help_texts["grain_name"])
         
-        ttk.Label(input_frame, text="Abbreviation:").grid(row=0, column=2, sticky="w", padx=5, pady=2)
+        abbrev_label = ttk.Label(input_frame, text="Abbreviation:")
+        abbrev_label.grid(row=0, column=2, sticky="w", padx=5, pady=2)
+        ToolTip(abbrev_label, self.help_texts["grain_abbrev"])
+        
         abbrev_entry = ttk.Entry(input_frame, width=15)
         abbrev_entry.grid(row=0, column=3, padx=5, pady=2)
+        ToolTip(abbrev_entry, self.help_texts["grain_abbrev"])
         
         # Row 1: Size dimensions
-        ttk.Label(input_frame, text="Min Size (mm):").grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        min_size_label = ttk.Label(input_frame, text="Min Size (mm):")
+        min_size_label.grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        ToolTip(min_size_label, self.help_texts["grain_min_size"])
+        
         min_size_entry = ttk.Entry(input_frame, width=15)
         min_size_entry.grid(row=1, column=1, padx=5, pady=2)
         min_size_entry.insert(0, "1.0")  # Default value
+        ToolTip(min_size_entry, self.help_texts["grain_min_size"])
         
-        ttk.Label(input_frame, text="Max Size (mm):").grid(row=1, column=2, sticky="w", padx=5, pady=2)
+        max_size_label = ttk.Label(input_frame, text="Max Size (mm):")
+        max_size_label.grid(row=1, column=2, sticky="w", padx=5, pady=2)
+        ToolTip(max_size_label, self.help_texts["grain_max_size"])
+        
         max_size_entry = ttk.Entry(input_frame, width=15)
         max_size_entry.grid(row=1, column=3, padx=5, pady=2)
         max_size_entry.insert(0, "1.0")  # Default value
+        ToolTip(max_size_entry, self.help_texts["grain_max_size"])
         
         def add_grain_size():
             name = name_entry.get().strip()
@@ -234,11 +350,26 @@ class JSONGeneratorApp:
         button_frame = ttk.Frame(self.root)
         button_frame.pack(pady=10)
         
-        ttk.Button(button_frame, text="Generate JSON", command=self.generate_json).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Save to File", command=self.save_to_file).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Load from File", command=self.load_from_file).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Clear All", command=self.clear_all).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Preview JSON", command=self.preview_json).pack(side=tk.LEFT, padx=5)
+        # Create buttons with tooltips
+        generate_btn = ttk.Button(button_frame, text="Generate JSON", command=self.generate_json)
+        generate_btn.pack(side=tk.LEFT, padx=5)
+        ToolTip(generate_btn, "Generate and preview the JSON structure in a new window")
+        
+        save_btn = ttk.Button(button_frame, text="Save to File", command=self.save_to_file)
+        save_btn.pack(side=tk.LEFT, padx=5)
+        ToolTip(save_btn, "Save the current data structure to a JSON file")
+        
+        load_btn = ttk.Button(button_frame, text="Load from File", command=self.load_from_file)
+        load_btn.pack(side=tk.LEFT, padx=5)
+        ToolTip(load_btn, "Load data from an existing JSON file")
+        
+        clear_btn = ttk.Button(button_frame, text="Clear All", command=self.clear_all)
+        clear_btn.pack(side=tk.LEFT, padx=5)
+        ToolTip(clear_btn, "Clear all data from all tabs")
+        
+        preview_btn = ttk.Button(button_frame, text="Preview JSON", command=self.preview_json)
+        preview_btn.pack(side=tk.LEFT, padx=5)
+        ToolTip(preview_btn, "Preview the current JSON structure without saving")
     
     def update_data(self):
         """Update the data dictionary with current form values"""
@@ -249,22 +380,13 @@ class JSONGeneratorApp:
         """Generate and display JSON in a new window"""
         self.update_data()
         
-        # Create the final JSON structure with definitions
+        # Create the final JSON structure without definitions
         json_data = {
             "catchment": self.data["catchment"],
             "HRU": self.data["HRU"],
             "landCoverType": self.data["landCoverType"],
             "bucket": self.data["bucket"],
-            "grainSizeClass": self.data["grainSizeClass"],
-            "defs": {
-                "header": {
-                    "type": "object",
-                    "properties": {
-                        "name": "string",
-                        "abbreviation": "string"
-                    }
-                }
-            }
+            "grainSizeClass": self.data["grainSizeClass"]
         }
         
         # Display in new window
@@ -304,16 +426,7 @@ class JSONGeneratorApp:
                     "HRU": self.data["HRU"],
                     "landCoverType": self.data["landCoverType"],
                     "bucket": self.data["bucket"],
-                    "grainSizeClass": self.data["grainSizeClass"],
-                    "defs": {
-                        "header": {
-                            "type": "object",
-                            "properties": {
-                                "name": "string",
-                                "abbreviation": "string"
-                            }
-                        }
-                    }
+                    "grainSizeClass": self.data["grainSizeClass"]
                 }
                 
                 with open(filename, 'w', encoding='utf-8') as f:
