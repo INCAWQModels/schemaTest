@@ -14,7 +14,21 @@
     },
     "grainSizeClass": {
         "type": "array",
-        "items": { "$ref": "#/defs/header" }
+        "items": { 
+            "$ref": "#/defs/header",
+            "minimumSize": {
+                "type": "number",
+                "description": "minimum mesh size, in millimetres, that will retain a particle",
+                "minimum": 0.0,
+                "default": 1.0
+            },
+             "maximumSize": {
+                "type": "number",
+                "description": "maximum mesh size, in millimetres, that will retain a particle",
+                "minimum": 0.0,
+                "default": 1.0
+            } 
+        }
     },
     "defs": {
         "header": {
@@ -22,6 +36,7 @@
             "properties": {
                 "name": "string",
                 "abbreviation": "string"
+            }
         }
     }
 }
