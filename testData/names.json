@@ -39,9 +39,16 @@
         "header": {
             "type": "object",
             "properties": {
-                "name": "string",
-                "abbreviation": "string"
-            }
+                "name": {
+                    "type": "string",
+                    "description": "A short text name or description of the object, spaces and special characters OK"
+                },
+                "abbreviation": {
+                    "type": "string",
+                    "description": "A short (1-3 character) abbreviation without spaces"
+                }
+            },
+            "required": ["name", "abbreviation"]
         }
     }
 }

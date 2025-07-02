@@ -1,0 +1,85 @@
+{
+  "catchment": {
+    "name": "First Try",
+    "abbreviation": "FT"
+  },
+  "HRU": [
+    {
+      "name": "Top",
+      "abbreviation": "T"
+    },
+    {
+      "name": "Middle",
+      "abbreviation": "M"
+    },
+    {
+      "name": "Bottom",
+      "abbreviation": "B"
+    }
+  ],
+  "landCoverType": [
+    {
+      "name": "Forest",
+      "abbreviation": "F"
+    },
+    {
+      "name": "Agriculture",
+      "abbreviation": "A"
+    }
+  ],
+  "bucket": [
+    {
+      "name": "Direct Runoff",
+      "abbreviation": "DR"
+    },
+    {
+      "name": "Soil Water",
+      "abbreviation": "SW"
+    },
+    {
+      "name": "Groundwater",
+      "abbreviation": "GW"
+    }
+  ],
+  "grainSizeClass": [
+    {
+      "name": "Clay",
+      "abbreviation": "CL",
+      "minimumSize": 0.0,
+      "maximumSize": 2e-06
+    },
+    {
+      "name": "Silt",
+      "abbreviation": "SI",
+      "minimumSize": 2e-06,
+      "maximumSize": 6e-05
+    },
+    {
+      "name": "Fine Sand",
+      "abbreviation": "FS",
+      "minimumSize": 6e-05,
+      "maximumSize": 0.0002
+    },
+    {
+      "name": "Medium Sand",
+      "abbreviation": "MS",
+      "minimumSize": 0.0002,
+      "maximumSize": 0.0006
+    },
+    {
+      "name": "Coarse Sand",
+      "abbreviation": "CS",
+      "minimumSize": 0.0006,
+      "maximumSize": 0.002
+    }
+  ],
+  "defs": {
+    "header": {
+      "type": "object",
+      "properties": {
+        "name": "string",
+        "abbreviation": "string"
+      }
+    }
+  }
+}
