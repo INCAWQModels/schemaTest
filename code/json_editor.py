@@ -333,7 +333,7 @@ class CatchmentJSONEditor:
                     for i, bucket in enumerate(value):
                         bucket_path = current_path + [i]
                         bucket_name = self.get_item_display_name(bucket, i)
-                        self.create_bucket_tab(land_cover_notebook, bucket_name, bucket, bucket_path)
+                        self.create_bucket_tab(land_cover_notebook, bucket_name, bucket, bucket_path, value)
                 else:
                     # Handle other land cover sections normally
                     if isinstance(value, dict):
@@ -349,7 +349,7 @@ class CatchmentJSONEditor:
         except Exception as e:
             self.handle_error(f"create_land_cover_tab ({land_cover_name})", e)
     
-    def create_bucket_tab(self, parent_notebook, bucket_name, bucket_data, base_path):
+    def create_bucket_tab(self, parent_notebook, bucket_name, bucket_data, base_path, all_buckets):
         """Create a tab for a specific bucket"""
         try:
             frame = ttk.Frame(parent_notebook)
@@ -373,7 +373,7 @@ class CatchmentJSONEditor:
                      font=("Arial", 12, "bold")).pack(pady=10)
             
             # Create expandable structure for bucket data
-            self.create_expandable_dict_interface(scrollable_frame, bucket_data, base_path)
+            self.create_expandable_dict_interface(scrollable_frame, bucket_data, base_path, all_buckets=all_buckets)
             
             # Pack canvas and scrollbar
             canvas.pack(side="left", fill="both", expand=True)
@@ -382,7 +382,28 @@ class CatchmentJSONEditor:
         except Exception as e:
             self.handle_error(f"create_bucket_tab ({bucket_name})", e)
     
-    def create_expandable_dict_interface(self, parent, data_dict, base_path, level=0):
+    def get_bucket_names(self, all_buckets):
+        """Extract bucket names from the buckets list"""
+        try:
+            return [bucket.get("name", f"Bucket {i}") for i, bucket in enumerate(all_buckets)]
+        except Exception as e:
+            self.handle_error("get_bucket_names", e)
+            return []
+    
+    def get_connection_label(self, bucket_index, connection_index, bucket_names):
+        """Get the appropriate label for a connection based on index"""
+        try:
+            if connection_index == bucket_index:
+                return "Runoff"
+            elif connection_index < len(bucket_names):
+                return bucket_names[connection_index]
+            else:
+                return f"Connection {connection_index}"
+        except Exception as e:
+            self.handle_error("get_connection_label", e)
+            return f"Connection {connection_index}"
+    
+    def create_expandable_dict_interface(self, parent, data_dict, base_path, level=0, all_buckets=None):
         """Create an expandable interface for dictionary data"""
         try:
             for key, value in data_dict.items():
@@ -390,10 +411,10 @@ class CatchmentJSONEditor:
                 
                 if isinstance(value, dict):
                     # Create expandable frame for sub-dictionary
-                    self.create_dict_section(parent, key, value, current_path, level)
+                    self.create_dict_section(parent, key, value, current_path, level, all_buckets)
                 elif isinstance(value, list):
                     # Create list section
-                    self.create_list_section(parent, key, value, current_path, level)
+                    self.create_list_section(parent, key, value, current_path, level, all_buckets)
                 else:
                     # Simple value
                     self.create_simple_value_row(parent, key, value, current_path, level)
@@ -401,7 +422,7 @@ class CatchmentJSONEditor:
         except Exception as e:
             self.handle_error(f"create_expandable_dict_interface (level {level})", e)
     
-    def create_dict_section(self, parent, section_name, data_dict, path, level):
+    def create_dict_section(self, parent, section_name, data_dict, path, level, all_buckets=None):
         """Create a collapsible section for a dictionary"""
         try:
             # Create frame for this section
@@ -414,12 +435,12 @@ class CatchmentJSONEditor:
             content_frame.pack(fill=tk.X, padx=10, pady=5)
             
             # Recursively create interface for dictionary contents
-            self.create_expandable_dict_interface(content_frame, data_dict, path, level + 1)
+            self.create_expandable_dict_interface(content_frame, data_dict, path, level + 1, all_buckets)
             
         except Exception as e:
             self.handle_error(f"create_dict_section ({section_name})", e)
     
-    def create_list_section(self, parent, section_name, data_list, path, level):
+    def create_list_section(self, parent, section_name, data_list, path, level, all_buckets=None):
         """Create a section for a list"""
         try:
             section_frame = ttk.LabelFrame(parent, text=f"{self.format_key_name(section_name)} ({len(data_list)} items)")
@@ -428,30 +449,82 @@ class CatchmentJSONEditor:
             content_frame = ttk.Frame(section_frame)
             content_frame.pack(fill=tk.X, padx=10, pady=5)
             
-            for i, item in enumerate(data_list):
-                item_path = path + [i]
-                
-                # Try to get a meaningful name for the item
-                item_name = self.get_item_display_name(item, i)
-                
-                if isinstance(item, dict):
-                    # Dictionary item
-                    item_frame = ttk.LabelFrame(content_frame, text=item_name)
-                    item_frame.pack(fill=tk.X, pady=2)
+            # Special handling for connections array
+            if section_name == "connections" and all_buckets:
+                self.create_connections_array_interface(content_frame, data_list, path, level, all_buckets)
+            else:
+                # Regular list handling
+                for i, item in enumerate(data_list):
+                    item_path = path + [i]
                     
-                    item_content = ttk.Frame(item_frame)
-                    item_content.pack(fill=tk.X, padx=5, pady=5)
+                    # Try to get a meaningful name for the item
+                    item_name = self.get_item_display_name(item, i)
                     
-                    self.create_expandable_dict_interface(item_content, item, item_path, level + 1)
-                elif isinstance(item, list):
-                    # Nested list
-                    ttk.Label(content_frame, text=f"{item_name}: Nested list with {len(item)} items").pack(anchor="w")
-                else:
-                    # Simple item
-                    self.create_simple_value_row(content_frame, f"Item {i}", item, item_path, level + 1)
-                    
+                    if isinstance(item, dict):
+                        # Dictionary item
+                        item_frame = ttk.LabelFrame(content_frame, text=item_name)
+                        item_frame.pack(fill=tk.X, pady=2)
+                        
+                        item_content = ttk.Frame(item_frame)
+                        item_content.pack(fill=tk.X, padx=5, pady=5)
+                        
+                        self.create_expandable_dict_interface(item_content, item, item_path, level + 1, all_buckets)
+                    elif isinstance(item, list):
+                        # Nested list
+                        ttk.Label(content_frame, text=f"{item_name}: Nested list with {len(item)} items").pack(anchor="w")
+                    else:
+                        # Simple item
+                        self.create_simple_value_row(content_frame, f"Item {i}", item, item_path, level + 1)
+                        
         except Exception as e:
             self.handle_error(f"create_list_section ({section_name})", e)
+    
+    def create_connections_array_interface(self, parent, connections_list, path, level, all_buckets):
+        """Create a special interface for the connections array"""
+        try:
+            # Get bucket names for labeling
+            bucket_names = self.get_bucket_names(all_buckets)
+            
+            # Figure out which bucket this is by looking at the path
+            bucket_index = None
+            try:
+                # Path should be like ["HRUs", 0, "subcatchment", "landCoverTypes", 0, "buckets", bucket_idx, "connections"]
+                if len(path) >= 2 and isinstance(path[-2], int):
+                    bucket_index = path[-2]  # The bucket index should be second to last in the path
+            except:
+                pass
+            
+            # Create a grid layout for connections
+            for i, connection_value in enumerate(connections_list):
+                connection_path = path + [i]
+                
+                # Get the appropriate label for this connection
+                if bucket_index is not None:
+                    connection_label = self.get_connection_label(bucket_index, i, bucket_names)
+                else:
+                    connection_label = f"Connection {i}"
+                
+                # Create row for this connection
+                row_frame = ttk.Frame(parent)
+                row_frame.pack(fill=tk.X, padx=level*10, pady=2)
+                
+                # Label
+                ttk.Label(row_frame, text=f"{connection_label}:", width=20).pack(side=tk.LEFT, padx=5)
+                
+                # Widget for editing the value
+                widget, var = self.create_widget_for_value(row_frame, connection_value, connection_path)
+                widget.pack(side=tk.LEFT, padx=5)
+                
+                if var is not None:
+                    widget_id = f"connection_{len(self.widgets)}"
+                    self.widgets[widget_id] = var
+                    self.widget_paths[widget_id] = connection_path
+                
+                # Type info and constraints
+                ttk.Label(row_frame, text="(float, 0.0-1.0)", foreground="gray").pack(side=tk.LEFT, padx=5)
+                
+        except Exception as e:
+            self.handle_error("create_connections_array_interface", e)
     
     def create_simple_value_row(self, parent, key, value, path, level):
         """Create a row for a simple value"""
@@ -585,7 +658,6 @@ class CatchmentJSONEditor:
             label = ttk.Label(parent, text=str(value))
             return label, None
     
-    # Additional tab creation methods
     def create_land_cover_properties_tab(self, parent_notebook, land_cover_data, base_path):
         """Create a properties tab for simple land cover values"""
         try:
@@ -683,7 +755,7 @@ class CatchmentJSONEditor:
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
             canvas.configure(yscrollcommand=scrollbar.set)
             
-            self.create_list_section(scrollable_frame, section_name, section_data, base_path, 0)
+            self.create_list_section(scrollable_frame, section_name, section_data, base_path, 0, None)
             
             # Pack canvas and scrollbar
             canvas.pack(side="left", fill="both", expand=True)
@@ -746,7 +818,7 @@ class CatchmentJSONEditor:
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
             canvas.configure(yscrollcommand=scrollbar.set)
             
-            self.create_list_section(scrollable_frame, section_name, section_data, base_path, 0)
+            self.create_list_section(scrollable_frame, section_name, section_data, base_path, 0, None)
             
             # Pack canvas and scrollbar
             canvas.pack(side="left", fill="both", expand=True)
@@ -964,6 +1036,7 @@ Features:
 - Read-only names and abbreviations for reference
 - Right-aligned numeric fields with appropriate sizing
 - Land cover types and buckets as individual tabs
+- Special handling for bucket connections arrays with proper labeling
 
 Created with Python tkinter.
             """
