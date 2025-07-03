@@ -118,6 +118,13 @@
                     "default": 700.0
                 }
             }
+        },
+        "connections": {
+            "type": "array",
+            "items": {
+                "type": "number"
+            },
+            "minItems": 1
         }
     },
     "required": ["name", "abbreviation","receivesPrecipitation"]
