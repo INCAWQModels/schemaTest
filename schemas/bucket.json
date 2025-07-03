@@ -121,8 +121,13 @@
         },
         "connections": {
             "type": "array",
+            "description": "array for routing water to other buckets in a land cover type",
             "items": {
-                "type": "number"
+                "type": "number",
+                "description": "Fraction of water routed from the current bucket to the bucket matching the array number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "default": 0.5
             },
             "minItems": 1
         }
