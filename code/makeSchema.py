@@ -28,8 +28,16 @@ def create_particle_size_class(name: str = "Default", abbreviation: str = "PSC",
         "mass": 1.0e+01
     }
 
-def create_bucket(name: str, abbreviation: str) -> Dict[str, Any]:
-    """Create a bucket object with default values."""
+def create_bucket(name: str, abbreviation: str, num_buckets: int, bucket_index: int) -> Dict[str, Any]:
+    """Create a bucket object with default values and connections array."""
+    # Create connections array with default routing fractions
+    # All zeros except potentially routing to the next bucket in sequence
+    connections = [0.0] * num_buckets
+    
+    # Default routing strategy: route to next bucket if not the last one
+    if bucket_index < num_buckets - 1:
+        connections[bucket_index + 1] = 0.5  # Route 50% to next bucket by default
+    
     return {
         "name": name,
         "abbreviation": abbreviation,
@@ -53,7 +61,8 @@ def create_bucket(name: str, abbreviation: str) -> Dict[str, Any]:
             "tightlyBound": 100.0,
             "plantAvailable": 200.0,
             "freelyDraining": 700.0
-        }
+        },
+        "connections": connections
     }
 
 def create_land_cover_soils(particle_size_classes: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -167,13 +176,18 @@ def generate_catchment_json(generated_names: Dict[str, Any]) -> Dict[str, Any]:
             )
             particle_size_classes.append(psc)
     
-    # Create buckets
+    # Create buckets with connections array
     buckets = []
-    if "bucket" in generated_names:
-        for bucket_info in generated_names["bucket"]:
+    bucket_info_list = generated_names.get("bucket", [])
+    num_buckets = len(bucket_info_list)
+    
+    if bucket_info_list:
+        for i, bucket_info in enumerate(bucket_info_list):
             bucket = create_bucket(
                 name=bucket_info.get("name", "Default Bucket"),
-                abbreviation=bucket_info.get("abbreviation", "DB")
+                abbreviation=bucket_info.get("abbreviation", "DB"),
+                num_buckets=num_buckets,
+                bucket_index=i
             )
             buckets.append(bucket)
     
@@ -181,10 +195,23 @@ def generate_catchment_json(generated_names: Dict[str, Any]) -> Dict[str, Any]:
     land_cover_types = []
     if "landCoverType" in generated_names:
         for lc_info in generated_names["landCoverType"]:
+            # Create a copy of buckets for each land cover type
+            land_cover_buckets = []
+            for i, bucket_template in enumerate(buckets):
+                # Create a copy of the bucket for this land cover type
+                bucket_copy = bucket_template.copy()
+                # Deep copy nested dictionaries
+                bucket_copy["evaporation"] = bucket_template["evaporation"].copy()
+                bucket_copy["soilTemperature"] = bucket_template["soilTemperature"].copy()
+                bucket_copy["waterDepth"] = bucket_template["waterDepth"].copy()
+                bucket_copy["connections"] = bucket_template["connections"].copy()
+                
+                land_cover_buckets.append(bucket_copy)
+            
             land_cover = create_land_cover_type(
                 name=lc_info.get("name", "Default Land Cover"),
                 abbreviation=lc_info.get("abbreviation", "DLC"),
-                buckets=buckets.copy(),
+                buckets=land_cover_buckets,
                 particle_size_classes=particle_size_classes.copy()
             )
             land_cover_types.append(land_cover)
@@ -193,10 +220,17 @@ def generate_catchment_json(generated_names: Dict[str, Any]) -> Dict[str, Any]:
     hrus = []
     if "HRU" in generated_names:
         for hru_info in generated_names["HRU"]:
+            # Create deep copies of land cover types for each HRU
+            hru_land_cover_types = []
+            for lc in land_cover_types:
+                # Deep copy the land cover type
+                lc_copy = json.loads(json.dumps(lc))  # Quick deep copy using JSON
+                hru_land_cover_types.append(lc_copy)
+            
             hru = create_hru(
                 name=hru_info.get("name", "Default HRU"),
                 abbreviation=hru_info.get("abbreviation", "DHRU"),
-                land_cover_types=land_cover_types.copy(),
+                land_cover_types=hru_land_cover_types,
                 particle_size_classes=particle_size_classes.copy()
             )
             hrus.append(hru)
@@ -268,6 +302,9 @@ def main():
             if sample_hru['subcatchment'].get('landCoverTypes'):
                 sample_lc = sample_hru['subcatchment']['landCoverTypes'][0]
                 print(f"Buckets per land cover: {len(sample_lc.get('buckets', []))}")
+                if sample_lc.get('buckets'):
+                    sample_bucket = sample_lc['buckets'][0]
+                    print(f"Connections array length: {len(sample_bucket.get('connections', []))}")
             print(f"Particle size classes: {len(sample_hru['subcatchment'].get('particleSizeClasses', []))}")
         
     except Exception as e:

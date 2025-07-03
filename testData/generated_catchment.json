@@ -55,7 +55,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.5,
+                                    0.0
+                                ]
                             },
                             {
                                 "name": "Soilwater",
@@ -80,7 +85,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.5
+                                ]
                             },
                             {
                                 "name": "Groundwater",
@@ -105,7 +115,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ]
                             }
                         ],
                         "soils": {
@@ -158,7 +173,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.5,
+                                    0.0
+                                ]
                             },
                             {
                                 "name": "Soilwater",
@@ -183,7 +203,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.5
+                                ]
                             },
                             {
                                 "name": "Groundwater",
@@ -208,7 +233,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ]
                             }
                         ],
                         "soils": {
@@ -295,7 +325,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.5,
+                                    0.0
+                                ]
                             },
                             {
                                 "name": "Soilwater",
@@ -320,7 +355,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.5
+                                ]
                             },
                             {
                                 "name": "Groundwater",
@@ -345,7 +385,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ]
                             }
                         ],
                         "soils": {
@@ -398,7 +443,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.5,
+                                    0.0
+                                ]
                             },
                             {
                                 "name": "Soilwater",
@@ -423,7 +473,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.5
+                                ]
                             },
                             {
                                 "name": "Groundwater",
@@ -448,7 +503,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ]
                             }
                         ],
                         "soils": {
@@ -535,7 +595,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.5,
+                                    0.0
+                                ]
                             },
                             {
                                 "name": "Soilwater",
@@ -560,7 +625,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.5
+                                ]
                             },
                             {
                                 "name": "Groundwater",
@@ -585,7 +655,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ]
                             }
                         ],
                         "soils": {
@@ -638,7 +713,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.5,
+                                    0.0
+                                ]
                             },
                             {
                                 "name": "Soilwater",
@@ -663,7 +743,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.5
+                                ]
                             },
                             {
                                 "name": "Groundwater",
@@ -688,7 +773,12 @@
                                     "tightlyBound": 100.0,
                                     "plantAvailable": 200.0,
                                     "freelyDraining": 700.0
-                                }
+                                },
+                                "connections": [
+                                    0.0,
+                                    0.0,
+                                    0.0
+                                ]
                             }
                         ],
                         "soils": {
