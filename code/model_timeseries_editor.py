@@ -114,12 +114,28 @@ class ModelTimeSeriesEditor:
                 "catchment": {
                     "name": "Sample Catchment",
                     "abbreviation": "SC",
-                    "timeSeries": {},
+                    "timeSeries": {
+                        "folder": "SampleCatchment",
+                        "solarRadiation": {
+                            "fileName": "SampleCatchment_solarRadiation",
+                            "mandatory": True,
+                            "generated": False
+                        },
+                        "temperatureAndPrecipitation": {
+                            "fileName": "SampleCatchment_temperatureAndPrecipitation",
+                            "mandatory": True,
+                            "generated": False
+                        }
+                    },
                     "HRUs": []
                 },
                 "summary": {
                     "totalHRUs": 0,
-                    "generatedFrom": {},
+                    "generatedFrom": {
+                        "schemas": "schemas.json",
+                        "timeSeries": "timeSeries.json",
+                        "generatedNames": "generatedNames.json"
+                    },
                     "totalLandCoverTypes": 0,
                     "totalBuckets": 0,
                     "totalParticleSizeClasses": 0
@@ -287,8 +303,14 @@ class ModelTimeSeriesEditor:
                 ts_frame.pack(fill=tk.X, padx=20, pady=10)
                 
                 for ts_name, ts_config in timeseries_data.items():
-                    self.create_timeseries_section(ts_frame, ts_name, ts_config, 
-                                                 ["catchment", "timeSeries", ts_name])
+                    if ts_name == "folder":
+                        # Special handling for folder property
+                        self.create_field_row(ts_frame, "Output Folder:", ts_config, 
+                                            ["catchment", "timeSeries", "folder"])
+                    elif isinstance(ts_config, dict):
+                        # Regular time series configuration
+                        self.create_timeseries_section(ts_frame, ts_name, ts_config, 
+                                                     ["catchment", "timeSeries", ts_name])
             else:
                 ttk.Label(scrollable_frame, text="No catchment time series configured.", 
                          foreground="gray").pack(pady=20)
@@ -810,7 +832,7 @@ A specialized tool for editing ModelTimeSeries.json files for hydrological model
 
 Features:
 - Overview tab with catchment information and summary statistics
-- Catchment-level time series configuration
+- Catchment-level time series configuration with folder property
 - Individual HRU tabs with subcatchment and reach time series
 - Land cover type and bucket time series configuration
 - Boolean checkboxes for mandatory/generated flags
@@ -820,6 +842,13 @@ Time Series Properties:
 - fileName: Base name for the time series files
 - mandatory: Whether the time series is required for model execution
 - generated: Whether the time series is generated during model run
+- folder: Output folder for catchment-level time series files
+
+The application supports the complete ModelTimeSeries.json structure including:
+- Catchment properties and time series (with folder configuration)
+- HRU-level organization with subcatchment and reach components
+- Land cover types with individual bucket configurations
+- Summary metadata tracking generation sources and statistics
 
 Created with Python tkinter using only standard library components.
             """
