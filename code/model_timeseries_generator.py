@@ -31,7 +31,7 @@ def get_component_name(component: Dict[str, Any], component_type: str, index: in
         
         if name:
             # Convert name to filename-safe format
-            return name.replace(" ", "_").replace("-", "_")
+            return name.replace(" ", "_").replace("-", "_").replace("/", "_")
         elif abbrev:
             return abbrev
     
@@ -197,6 +197,102 @@ def generate_catchment_time_series(catchment_info: Dict[str, Any],
     
     return catchment_ts
 
+def find_catchment_structure_file(generated_names_path: str) -> Optional[str]:
+    """Try to find the catchment structure file (generated_catchment.json)."""
+    # Get the directory of the generated_names file
+    base_dir = os.path.dirname(generated_names_path)
+    
+    # Possible locations for the catchment file
+    possible_catchment_paths = [
+        os.path.join(base_dir, "generated_catchment.json"),
+        "testData/generated_catchment.json",
+        "../testData/generated_catchment.json",
+        "generated_catchment.json"
+    ]
+    
+    for path in possible_catchment_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
+def create_fallback_hru_structure(generated_names: Dict[str, Any], time_series_defs: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Create a fallback HRU structure when catchment file is not available."""
+    hrus_list = []
+    
+    # Get basic HRU info from generated names
+    hrus_info = generated_names.get("HRU", [])
+    land_cover_info = generated_names.get("landCoverType", [])
+    bucket_info = generated_names.get("bucket", [])
+    
+    for hru_index, hru_basic_info in enumerate(hrus_info):
+        hru_name = get_component_name(hru_basic_info, "HRU", hru_index)
+        
+        # Create minimal subcatchment time series
+        subcatchment_ts = {}
+        subcatchment_time_series = time_series_defs.get("subcatchment", {})
+        for ts_type in subcatchment_time_series.keys():
+            base_name = f"{hru_name}_subcatchment"
+            subcatchment_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+        
+        # Add land cover types if available
+        if land_cover_info:
+            subcatchment_ts["landCoverTypes"] = []
+            for lc_index, lc_info in enumerate(land_cover_info):
+                lc_name = get_component_name(lc_info, "landCoverType", lc_index)
+                lc_base_name = f"{hru_name}_{lc_name}"
+                
+                lc_ts = {}
+                # Add land cover time series
+                landcover_time_series = time_series_defs.get("landCoverType", {})
+                for ts_type in landcover_time_series.keys():
+                    lc_ts[ts_type] = create_time_series_entry(lc_base_name, ts_type)
+                
+                # Add buckets if available
+                if bucket_info:
+                    lc_ts["buckets"] = []
+                    for bucket_index, bucket_basic_info in enumerate(bucket_info):
+                        bucket_name = get_component_name(bucket_basic_info, "bucket", bucket_index)
+                        bucket_base_name = f"{hru_name}_{lc_name}_{bucket_name}"
+                        
+                        bucket_ts = {}
+                        bucket_time_series = time_series_defs.get("bucket", {})
+                        for ts_type in bucket_time_series.keys():
+                            bucket_ts[ts_type] = create_time_series_entry(bucket_base_name, ts_type)
+                        
+                        lc_ts["buckets"].append({
+                            "name": bucket_basic_info.get("name", f"Bucket_{bucket_index}"),
+                            "abbreviation": bucket_basic_info.get("abbreviation", f"B{bucket_index}"),
+                            "timeSeries": bucket_ts
+                        })
+                
+                subcatchment_ts["landCoverTypes"].append({
+                    "name": lc_info.get("name", f"LandCover_{lc_index}"),
+                    "abbreviation": lc_info.get("abbreviation", f"LC{lc_index}"),
+                    "timeSeries": lc_ts
+                })
+        
+        # Create minimal reach time series
+        reach_ts = {}
+        reach_time_series = time_series_defs.get("reach", {})
+        for ts_type in reach_time_series.keys():
+            base_name = f"{hru_name}_reach"
+            reach_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+        
+        # Create HRU entry
+        hru_ts = {
+            "name": hru_basic_info.get("name", f"HRU_{hru_index}"),
+            "abbreviation": hru_basic_info.get("abbreviation", f"H{hru_index}"),
+            "timeSeries": {
+                "subcatchment": subcatchment_ts,
+                "reach": reach_ts
+            }
+        }
+        
+        hrus_list.append(hru_ts)
+    
+    return hrus_list
+
 def generate_model_time_series(schemas_path: str, time_series_path: str, 
                              generated_names_path: str, output_path: str) -> None:
     """Main function to generate the ModelTimeSeries.json file."""
@@ -228,35 +324,18 @@ def generate_model_time_series(schemas_path: str, time_series_path: str,
         generated_names.get("catchment", {}), time_series_defs
     )
     
-    # Load the actual catchment structure to get HRU details
-    # First, try to find the generated catchment file
-    possible_catchment_paths = [
-        "testData/generated_catchment.json",
-        "../testData/generated_catchment.json",
-        "generated_catchment.json"
-    ]
-    
+    # Try to find and load the catchment structure file
+    catchment_file_path = find_catchment_structure_file(generated_names_path)
     catchment_data = None
-    for path in possible_catchment_paths:
-        if os.path.exists(path):
-            catchment_data = load_json_file(path)
-            break
+    
+    if catchment_file_path:
+        catchment_data = load_json_file(catchment_file_path)
+        print(f"Found catchment structure file: {catchment_file_path}")
     
     if not catchment_data:
-        print("Warning: Could not find generated catchment file. Using generatedNames.json structure.")
-        # Fallback: create basic structure from generatedNames
-        hrus_info = generated_names.get("HRU", [])
-        for hru_index, hru_basic_info in enumerate(hrus_info):
-            # Create a minimal HRU structure
-            hru_ts = {
-                "name": hru_basic_info.get("name", f"HRU_{hru_index}"),
-                "abbreviation": hru_basic_info.get("abbreviation", f"H{hru_index}"),
-                "timeSeries": {
-                    "subcatchment": {},
-                    "reach": {}
-                }
-            }
-            model_time_series["catchment"]["HRUs"].append(hru_ts)
+        print("Warning: Could not find generated catchment file. Creating structure from generatedNames.json.")
+        # Create structure from generatedNames
+        model_time_series["catchment"]["HRUs"] = create_fallback_hru_structure(generated_names, time_series_defs)
     else:
         # Use the full catchment structure
         hrus_data = catchment_data.get("HRUs", [])
@@ -274,35 +353,38 @@ def generate_model_time_series(schemas_path: str, time_series_path: str,
         }
     }
     
-    # If we used the full catchment data, add more detailed summary
-    if catchment_data:
-        # Count land cover types and buckets
-        total_land_covers = 0
-        total_buckets = 0
-        total_particle_classes = 0
-        
-        for hru in model_time_series["catchment"]["HRUs"]:
-            if "subcatchment" in hru["timeSeries"]:
-                land_covers = hru["timeSeries"]["subcatchment"].get("landCoverTypes", [])
-                total_land_covers += len(land_covers)
-                
-                for lc in land_covers:
-                    buckets = lc["timeSeries"].get("buckets", [])
-                    total_buckets += len(buckets)
-                
-                # Count particle size classes
-                psc_info = hru["timeSeries"]["subcatchment"].get("particleSizeClasses", {})
-                if isinstance(psc_info, dict) and "count" in psc_info:
-                    total_particle_classes += psc_info["count"]
-        
-        model_time_series["summary"].update({
-            "totalLandCoverTypes": total_land_covers,
-            "totalBuckets": total_buckets,
-            "totalParticleSizeClasses": total_particle_classes
-        })
+    # Add detailed summary statistics
+    total_land_covers = 0
+    total_buckets = 0
+    total_particle_classes = 0
+    
+    for hru in model_time_series["catchment"]["HRUs"]:
+        if "subcatchment" in hru["timeSeries"]:
+            land_covers = hru["timeSeries"]["subcatchment"].get("landCoverTypes", [])
+            total_land_covers += len(land_covers)
+            
+            for lc in land_covers:
+                buckets = lc["timeSeries"].get("buckets", [])
+                total_buckets += len(buckets)
+            
+            # Count particle size classes
+            psc_info = hru["timeSeries"]["subcatchment"].get("particleSizeClasses", {})
+            if isinstance(psc_info, dict) and "count" in psc_info:
+                total_particle_classes += psc_info["count"]
+    
+    model_time_series["summary"].update({
+        "totalLandCoverTypes": total_land_covers,
+        "totalBuckets": total_buckets,
+        "totalParticleSizeClasses": total_particle_classes
+    })
     
     # Save the generated model time series
     try:
+        # Ensure output directory exists
+        output_dir = os.path.dirname(output_path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(model_time_series, f, indent=2, ensure_ascii=False)
         
@@ -310,11 +392,9 @@ def generate_model_time_series(schemas_path: str, time_series_path: str,
         print(f"Summary:")
         print(f"  - Catchment: {model_time_series['catchment']['name']}")
         print(f"  - Total HRUs: {model_time_series['summary']['totalHRUs']}")
-        
-        if "totalLandCoverTypes" in model_time_series["summary"]:
-            print(f"  - Total Land Cover Types: {model_time_series['summary']['totalLandCoverTypes']}")
-            print(f"  - Total Buckets: {model_time_series['summary']['totalBuckets']}")
-            print(f"  - Total Particle Size Classes: {model_time_series['summary']['totalParticleSizeClasses']}")
+        print(f"  - Total Land Cover Types: {model_time_series['summary']['totalLandCoverTypes']}")
+        print(f"  - Total Buckets: {model_time_series['summary']['totalBuckets']}")
+        print(f"  - Total Particle Size Classes: {model_time_series['summary']['totalParticleSizeClasses']}")
         
     except Exception as e:
         print(f"Error writing output file: {e}")
@@ -322,10 +402,10 @@ def generate_model_time_series(schemas_path: str, time_series_path: str,
 def main():
     """Main function with default file paths."""
     # Default file paths based on the repository structure
-    schemas_path = "../schemas/schemas.json"
-    time_series_path = "../schemas/timeSeries.json"
-    generated_names_path = "../testData/generatedNames.json"
-    output_path = "../testData/ModelTimeSeries.json"
+    schemas_path = "schemas/schemas.json"
+    time_series_path = "schemas/timeSeries.json"
+    generated_names_path = "testData/generatedNames.json"
+    output_path = "testData/ModelTimeSeries.json"
     
     # Check if files exist, adjust paths if needed
     for path_var, path_val in [
@@ -347,7 +427,7 @@ def main():
                 print(f"Warning: Could not find {path_val}")
     
     # Also try alternative output path
-    if not os.path.exists(os.path.dirname(output_path)):
+    if not os.path.exists(os.path.dirname(output_path)) and os.path.dirname(output_path):
         alt_output = "../testData/ModelTimeSeries.json"
         if os.path.exists(os.path.dirname(alt_output)):
             output_path = alt_output

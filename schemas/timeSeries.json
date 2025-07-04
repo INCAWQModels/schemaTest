@@ -7,6 +7,10 @@
         "waterOutputs":                 { "$ref": "#/defs/timeSeries"}
     },
     "catchment": {
+        "folder": {
+            "type": "string",
+            "description": "valid folder name for storing all time series results"
+        },
         "solarRadiation":               { "$ref": "#/defs/timeSeries"},
         "temperatureAndPrecipitation":  { "$ref": "#/defs/timeSeries"}
     },
