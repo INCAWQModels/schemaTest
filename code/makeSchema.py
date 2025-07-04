@@ -117,7 +117,7 @@ def create_reach(particle_size_classes: List[Dict[str, Any]]) -> Dict[str, Any]:
         "dimensions": {
             "length": 100.0,
             "widthAtSedimentSurface": 1.0,
-            "slope": 10e-05
+            "slope": 0.0001
         },
         "particleSizeClasses": particle_size_classes,
         "Manning": {
@@ -126,7 +126,8 @@ def create_reach(particle_size_classes: List[Dict[str, Any]]) -> Dict[str, Any]:
             "c": 0.349,
             "f": 0.341,
             "n": 0.1
-        }
+        },
+        "downstreamHRU": 0
     }
 
 def create_subcatchment(land_cover_types: List[Dict[str, Any]], 
