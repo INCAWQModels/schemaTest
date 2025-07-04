@@ -3,8 +3,8 @@
         "actualEvapotranspiration":     { "$ref": "#/defs/timeSeries"},
         "waterLevel":                   { "$ref": "#/defs/timeSeries"},
         "soilTemperature":              { "$ref": "#/defs/timeSeries"},
-        "inputs":                       { "$ref": "#/defs/timeSeries"},
-        "outputs":                      { "$ref": "#/defs/timeSeries"}
+        "waterInputs":                  { "$ref": "#/defs/timeSeries"},
+        "waterOutputs":                 { "$ref": "#/defs/timeSeries"}
     },
     "catchment": {
         "solarRadiation":               { "$ref": "#/defs/timeSeries"},
@@ -12,7 +12,7 @@
     },
     "landCoverType": {
         "potentialEvapotranspiration":  { "$ref": "#/defs/timeSeries"},
-        "outputs":                      { "$ref": "#/defs/timeSeries"}
+        "waterOutputs":                 { "$ref": "#/defs/timeSeries"}
     },
     "reach": {
         "flow":                         { "$ref": "#/defs/timeSeries"},
@@ -30,7 +30,7 @@
             "properties": {
                 "fileName": {
                     "type": "string",
-                    "description": "A short text name or description of the object, spaces and special characters OK",
+                    "description": "A valid string identifying the .csv and .json files used for storing time series data",
                     "default": null
                 },
                 "mandatory": {
