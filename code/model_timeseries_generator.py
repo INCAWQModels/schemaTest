@@ -38,6 +38,12 @@ def get_component_name(component: Dict[str, Any], component_type: str, index: in
     # Fallback to type and index
     return f"{component_type}_{index}"
 
+def is_time_series_definition(value: Any) -> bool:
+    """Check if a value is a time series definition (has $ref to timeSeries)."""
+    if isinstance(value, dict):
+        return value.get("$ref") == "#/defs/timeSeries"
+    return False
+
 def generate_bucket_time_series(bucket_info: Dict[str, Any], bucket_index: int, 
                                landcover_name: str, hru_name: str, 
                                time_series_defs: Dict[str, Any]) -> Dict[str, Any]:
@@ -48,8 +54,10 @@ def generate_bucket_time_series(bucket_info: Dict[str, Any], bucket_index: int,
     bucket_ts = {}
     bucket_time_series = time_series_defs.get("bucket", {})
     
-    for ts_type in bucket_time_series.keys():
-        bucket_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+    # Only process actual time series definitions
+    for ts_type, ts_def in bucket_time_series.items():
+        if is_time_series_definition(ts_def):
+            bucket_ts[ts_type] = create_time_series_entry(base_name, ts_type)
     
     return bucket_ts
 
@@ -63,8 +71,9 @@ def generate_landcover_time_series(landcover_info: Dict[str, Any], landcover_ind
     
     # Add land cover type time series
     landcover_time_series = time_series_defs.get("landCoverType", {})
-    for ts_type in landcover_time_series.keys():
-        landcover_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+    for ts_type, ts_def in landcover_time_series.items():
+        if is_time_series_definition(ts_def):
+            landcover_ts[ts_type] = create_time_series_entry(base_name, ts_type)
     
     # Add buckets time series
     buckets = landcover_info.get("buckets", [])
@@ -91,8 +100,9 @@ def generate_subcatchment_time_series(subcatchment_info: Dict[str, Any], hru_nam
     
     # Add subcatchment time series
     subcatchment_time_series = time_series_defs.get("subcatchment", {})
-    for ts_type in subcatchment_time_series.keys():
-        subcatchment_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+    for ts_type, ts_def in subcatchment_time_series.items():
+        if is_time_series_definition(ts_def):
+            subcatchment_ts[ts_type] = create_time_series_entry(base_name, ts_type)
     
     # Add land cover types time series
     land_cover_types = subcatchment_info.get("landCoverTypes", [])
@@ -131,8 +141,9 @@ def generate_reach_time_series(reach_info: Dict[str, Any], hru_name: str,
     
     # Add reach time series
     reach_time_series = time_series_defs.get("reach", {})
-    for ts_type in reach_time_series.keys():
-        reach_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+    for ts_type, ts_def in reach_time_series.items():
+        if is_time_series_definition(ts_def):
+            reach_ts[ts_type] = create_time_series_entry(base_name, ts_type)
     
     # Add particle size classes if present
     particle_size_classes = reach_info.get("particleSizeClasses", [])
@@ -185,15 +196,24 @@ def generate_catchment_time_series(catchment_info: Dict[str, Any],
     
     catchment_ts = {}
     
-    # Add catchment-level time series
+    # Add catchment-level time series and configuration properties
     catchment_time_series = time_series_defs.get("catchment", {})
-    for ts_type in catchment_time_series.keys():
-        # Set appropriate mandatory/generated flags for catchment inputs
-        mandatory = ts_type in ["temperatureAndPrecipitation", "solarRadiation"]
-        generated = not mandatory
-        
-        entry = create_time_series_entry(base_name, ts_type, mandatory, generated)
-        catchment_ts[ts_type] = entry
+    for ts_type, ts_def in catchment_time_series.items():
+        if is_time_series_definition(ts_def):
+            # This is a time series definition
+            # Set appropriate mandatory/generated flags for catchment inputs
+            mandatory = ts_type in ["temperatureAndPrecipitation", "solarRadiation"]
+            generated = not mandatory
+            
+            entry = create_time_series_entry(base_name, ts_type, mandatory, generated)
+            catchment_ts[ts_type] = entry
+        elif ts_type == "folder":
+            # Special handling for folder configuration property
+            # Generate folder name based on catchment name
+            catchment_ts["folder"] = catchment_name
+        else:
+            # Handle other configuration properties if they exist
+            catchment_ts[ts_type] = f"{catchment_name}_{ts_type}"
     
     return catchment_ts
 
@@ -231,9 +251,10 @@ def create_fallback_hru_structure(generated_names: Dict[str, Any], time_series_d
         # Create minimal subcatchment time series
         subcatchment_ts = {}
         subcatchment_time_series = time_series_defs.get("subcatchment", {})
-        for ts_type in subcatchment_time_series.keys():
-            base_name = f"{hru_name}_subcatchment"
-            subcatchment_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+        for ts_type, ts_def in subcatchment_time_series.items():
+            if is_time_series_definition(ts_def):
+                base_name = f"{hru_name}_subcatchment"
+                subcatchment_ts[ts_type] = create_time_series_entry(base_name, ts_type)
         
         # Add land cover types if available
         if land_cover_info:
@@ -245,8 +266,9 @@ def create_fallback_hru_structure(generated_names: Dict[str, Any], time_series_d
                 lc_ts = {}
                 # Add land cover time series
                 landcover_time_series = time_series_defs.get("landCoverType", {})
-                for ts_type in landcover_time_series.keys():
-                    lc_ts[ts_type] = create_time_series_entry(lc_base_name, ts_type)
+                for ts_type, ts_def in landcover_time_series.items():
+                    if is_time_series_definition(ts_def):
+                        lc_ts[ts_type] = create_time_series_entry(lc_base_name, ts_type)
                 
                 # Add buckets if available
                 if bucket_info:
@@ -257,8 +279,9 @@ def create_fallback_hru_structure(generated_names: Dict[str, Any], time_series_d
                         
                         bucket_ts = {}
                         bucket_time_series = time_series_defs.get("bucket", {})
-                        for ts_type in bucket_time_series.keys():
-                            bucket_ts[ts_type] = create_time_series_entry(bucket_base_name, ts_type)
+                        for ts_type, ts_def in bucket_time_series.items():
+                            if is_time_series_definition(ts_def):
+                                bucket_ts[ts_type] = create_time_series_entry(bucket_base_name, ts_type)
                         
                         lc_ts["buckets"].append({
                             "name": bucket_basic_info.get("name", f"Bucket_{bucket_index}"),
@@ -275,9 +298,10 @@ def create_fallback_hru_structure(generated_names: Dict[str, Any], time_series_d
         # Create minimal reach time series
         reach_ts = {}
         reach_time_series = time_series_defs.get("reach", {})
-        for ts_type in reach_time_series.keys():
-            base_name = f"{hru_name}_reach"
-            reach_ts[ts_type] = create_time_series_entry(base_name, ts_type)
+        for ts_type, ts_def in reach_time_series.items():
+            if is_time_series_definition(ts_def):
+                base_name = f"{hru_name}_reach"
+                reach_ts[ts_type] = create_time_series_entry(base_name, ts_type)
         
         # Create HRU entry
         hru_ts = {
