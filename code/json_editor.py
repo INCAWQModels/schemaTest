@@ -17,6 +17,7 @@ class CatchmentJSONEditor:
         self.file_path = None
         self.widgets = {}  # Store widget references for data binding
         self.widget_paths = {}  # Store the JSON path for each widget
+        self.downstream_vars = {}  # Store downstream HRU selection variables
         
         # Setup error handling
         self.setup_error_handling()
@@ -150,6 +151,19 @@ class CatchmentJSONEditor:
         except Exception as e:
             self.handle_error("load_file", e)
     
+    def get_hru_list(self):
+        """Get list of HRUs with their names for dropdown options"""
+        try:
+            hru_list = ["None/Outlet"]  # First option for outlet
+            if "HRUs" in self.data and isinstance(self.data["HRUs"], list):
+                for i, hru in enumerate(self.data["HRUs"]):
+                    name = hru.get("name", hru.get("abbreviation", f"HRU {i}"))
+                    hru_list.append(f"{i}: {name}")
+            return hru_list
+        except Exception as e:
+            self.handle_error("get_hru_list", e)
+            return ["None/Outlet"]
+    
     def create_catchment_interface(self):
         """Create interface specifically for catchment JSON structure"""
         try:
@@ -160,6 +174,7 @@ class CatchmentJSONEditor:
             # Clear widgets dictionary
             self.widgets = {}
             self.widget_paths = {}
+            self.downstream_vars = {}
             
             # Create catchment overview tab
             self.create_catchment_overview_tab()
@@ -268,18 +283,113 @@ class CatchmentJSONEditor:
             hru_notebook = ttk.Notebook(frame)
             hru_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             
-            # Create tabs for different HRU sections (skip properties tab)
-            # Look for major sub-sections and create tabs for them
+            # Create tabs for different HRU sections
             for key, value in hru_data.items():
                 if isinstance(value, dict) and key not in ["name", "abbreviation"]:
                     # Correct path construction: ["HRUs", hru_index, key]
                     if key == "subcatchment":
                         self.create_subcatchment_tab(hru_notebook, value, ["HRUs", hru_index, key])
+                    elif key == "reach":
+                        self.create_reach_tab(hru_notebook, value, ["HRUs", hru_index, key], hru_index)
                     else:
                         self.create_hru_section_tab(hru_notebook, key, value, ["HRUs", hru_index, key])
                         
         except Exception as e:
             self.handle_error(f"create_hru_tab (index {hru_index})", e)
+    
+    def create_reach_tab(self, parent_notebook, reach_data, base_path, hru_index):
+        """Create a special reach tab with downstream HRU selection"""
+        try:
+            frame = ttk.Frame(parent_notebook)
+            parent_notebook.add(frame, text="Reach")
+            
+            # Create scrollable frame
+            canvas = tk.Canvas(frame)
+            scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+            scrollable_frame = ttk.Frame(canvas)
+            
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+            
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            
+            # Title
+            ttk.Label(scrollable_frame, text="Reach Properties", 
+                     font=("Arial", 12, "bold")).pack(pady=10)
+            
+            # Create expandable structure for reach data, but handle downstreamHRU specially
+            reach_data_copy = reach_data.copy()
+            downstream_hru_value = reach_data_copy.pop("downstreamHRU", 0)
+            
+            # Create interface for other reach properties
+            if reach_data_copy:
+                self.create_expandable_dict_interface(scrollable_frame, reach_data_copy, base_path)
+            
+            # Add special section for downstream HRU selection
+            self.create_downstream_hru_section(scrollable_frame, downstream_hru_value, base_path + ["downstreamHRU"], hru_index)
+            
+            # Pack canvas and scrollbar
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            
+        except Exception as e:
+            self.handle_error("create_reach_tab", e)
+    
+    def create_downstream_hru_section(self, parent, current_value, path, current_hru_index):
+        """Create a special section for downstream HRU selection"""
+        try:
+            # Create frame for downstream HRU selection
+            downstream_frame = ttk.LabelFrame(parent, text="Downstream HRU Selection", padding=10)
+            downstream_frame.pack(fill=tk.X, padx=20, pady=10)
+            
+            # Get HRU options
+            hru_options = self.get_hru_list()
+            
+            # Create selection frame
+            selection_frame = ttk.Frame(downstream_frame)
+            selection_frame.pack(fill=tk.X)
+            
+            # Label
+            ttk.Label(selection_frame, text="This HRU flows to:", width=20).pack(side=tk.LEFT, padx=5)
+            
+            # Determine current selection string from the numeric value
+            current_selection = "None/Outlet"  # Default
+            if current_value > 0 and current_value < len(self.data.get("HRUs", [])):
+                hru_name = self.data["HRUs"][current_value].get("name", 
+                                                              self.data["HRUs"][current_value].get("abbreviation", f"HRU {current_value}"))
+                current_selection = f"{current_value}: {hru_name}"
+            
+            # Create variable and dropdown
+            var = tk.StringVar(value=current_selection)
+            
+            # Filter out current HRU from options (HRU can't flow to itself)
+            filtered_options = []
+            for option in hru_options:
+                if option == "None/Outlet":
+                    filtered_options.append(option)
+                elif not option.startswith(f"{current_hru_index}:"):
+                    filtered_options.append(option)
+            
+            dropdown = ttk.Combobox(selection_frame, textvariable=var, values=filtered_options, 
+                                  state="readonly", width=40)
+            dropdown.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+            
+            # Store the variable for later retrieval
+            widget_id = f"downstream_hru_{current_hru_index}"
+            self.downstream_vars[widget_id] = var
+            self.widget_paths[widget_id] = path
+            
+            # Add help text
+            help_text = ttk.Label(downstream_frame, 
+                                text="Select which HRU this one flows to, or 'None/Outlet' if it flows to the catchment outlet.",
+                                foreground="gray", font=("Arial", 9))
+            help_text.pack(pady=(10, 0))
+            
+        except Exception as e:
+            self.handle_error("create_downstream_hru_section", e)
     
     def create_subcatchment_tab(self, parent_notebook, subcatchment_data, base_path):
         """Create a special subcatchment tab with land cover types as tabs"""
@@ -868,7 +978,7 @@ class CatchmentJSONEditor:
             import copy
             updated_data = copy.deepcopy(self.data)
             
-            # Update values from widgets
+            # Update values from regular widgets
             for widget_id, var in self.widgets.items():
                 if widget_id in self.widget_paths:
                     path = self.widget_paths[widget_id]
@@ -883,6 +993,30 @@ class CatchmentJSONEditor:
                             new_value = self.convert_string_to_type(string_value, type(original_value))
                         else:
                             new_value = var.get()
+                        
+                        # Set the value at the path
+                        self.set_value_at_path(updated_data, path, new_value)
+                        
+                    except Exception as e:
+                        # Skip individual widget errors but continue with others
+                        pass
+            
+            # Update values from downstream HRU widgets
+            for widget_id, var in self.downstream_vars.items():
+                if widget_id in self.widget_paths:
+                    path = self.widget_paths[widget_id]
+                    
+                    try:
+                        selection = var.get()
+                        
+                        if selection == "None/Outlet":
+                            new_value = 0
+                        else:
+                            # Extract index from "i: Name" format
+                            try:
+                                new_value = int(selection.split(":")[0])
+                            except (ValueError, IndexError):
+                                new_value = 0  # Default fallback
                         
                         # Set the value at the path
                         self.set_value_at_path(updated_data, path, new_value)
@@ -1037,6 +1171,7 @@ Features:
 - Right-aligned numeric fields with appropriate sizing
 - Land cover types and buckets as individual tabs
 - Special handling for bucket connections arrays with proper labeling
+- Downstream HRU selection with dropdown showing HRU names
 
 Created with Python tkinter.
             """
