@@ -73,6 +73,10 @@
                     "default": 0.1
                 }
             }  
+        },
+        "downstreamHRU": {
+            "type": "number",
+            "description": "the index of the immediately downstream HRU that the current reach flows into"
         }
     }
 }
