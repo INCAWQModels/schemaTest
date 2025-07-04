@@ -30,12 +30,18 @@
             "properties": {
                 "fileName": {
                     "type": "string",
-                    "description": "A short text name or description of the object, spaces and special characters OK"
+                    "description": "A short text name or description of the object, spaces and special characters OK",
+                    "default": null
                 },
                 "mandatory": {
                     "type": "boolean",
                     "default": "false",
                     "description": "Whether or not a time series is required to run a mondel"
+                },
+                "generated": {
+                    "type": "boolean",
+                    "default": "true",
+                    "description": "whether a time series is generated during a model run"
                 }
             }
         }
