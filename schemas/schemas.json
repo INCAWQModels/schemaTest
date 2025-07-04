@@ -4,7 +4,8 @@
     "HRU": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/HRU.json",
     "landCoverType": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/landCover.json",
     "particleSizeClass": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/particleSizeClass.json",
-    "reach": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/reach.json"
+    "reach": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/reach.json",
+    "subcatchment": "https://raw.githubusercontent.com/INCAWQModels/schemaTest/refs/heads/main/schemas/subcatchment.json"
 }
     
  

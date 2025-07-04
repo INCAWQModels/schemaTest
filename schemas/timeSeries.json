@@ -1,0 +1,44 @@
+{
+    "bucket": {
+        "actualEvapotranspiration":     { "$ref": "#/defs/timeSeries"},
+        "waterLevel":                   { "$ref": "#/defs/timeSeries"},
+        "soilTemperature":              { "$ref": "#/defs/timeSeries"},
+        "inputs":                       { "$ref": "#/defs/timeSeries"},
+        "outputs":                      { "$ref": "#/defs/timeSeries"}
+    },
+    "catchment": {
+        "solarRadiation":               { "$ref": "#/defs/timeSeries"},
+        "temperatureAndPrecipitation":  { "$ref": "#/defs/timeSeries"}
+    },
+    "landCoverType": {
+        "potentialEvapotranspiration":  { "$ref": "#/defs/timeSeries"},
+        "outputs":                      { "$ref": "#/defs/timeSeries"}
+    },
+    "reach": {
+        "flow":                         { "$ref": "#/defs/timeSeries"},
+        "abstraction":                  { "$ref": "#/defs/timeSeries"},
+        "effluent":                     { "$ref": "#/defs/timeSeries"}
+    }, 
+    "subcatchment": {
+        "solarRadiation":               { "$ref": "#/defs/timeSeries"},
+        "temperatureAndPrecipitation":  { "$ref": "#/defs/timeSeries"},
+        "runoffToReach":                { "$ref": "#/defs/timeSeries"}
+    },
+    "defs": {
+        "timeSeries": {
+            "type": "object",
+            "properties": {
+                "fileName": {
+                    "type": "string",
+                    "description": "A short text name or description of the object, spaces and special characters OK"
+                },
+                "mandatory": {
+                    "type": "boolean",
+                    "default": "false",
+                    "description": "Whether or not a time series is required to run a mondel"
+                }
+            }
+        }
+    }
+}
+    
