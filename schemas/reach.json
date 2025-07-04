@@ -76,7 +76,8 @@
         },
         "downstreamHRU": {
             "type": "number",
-            "description": "the index of the immediately downstream HRU that the current reach flows into"
+            "description": "the index of the immediately downstream HRU that the current reach flows into",
+            "default": 0
         }
     }
 }
