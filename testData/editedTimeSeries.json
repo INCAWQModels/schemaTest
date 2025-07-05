@@ -3,17 +3,7 @@
     "name": "Test",
     "abbreviation": "TT",
     "timeSeries": {
-      "folder": ".",
-      "solarRadiation": {
-        "fileName": "Test_catchment_solarRadiation",
-        "mandatory": true,
-        "generated": false
-      },
-      "temperatureAndPrecipitation": {
-        "fileName": "Test_catchment_temperatureAndPrecipitation",
-        "mandatory": true,
-        "generated": false
-      }
+      "folder": "C:/Users/futter/Dropbox/Code/schemaTest/testData"
     },
     "HRUs": [
       {
@@ -27,9 +17,9 @@
               "generated": true
             },
             "temperatureAndPrecipitation": {
-              "fileName": "Upper_subcatchment_temperatureAndPrecipitation",
-              "mandatory": false,
-              "generated": true
+              "fileName": "PERSiST_Top",
+              "mandatory": true,
+              "generated": false
             },
             "runoffToReach": {
               "fileName": "Upper_subcatchment_runoffToReach",
@@ -291,9 +281,9 @@
               "generated": true
             },
             "temperatureAndPrecipitation": {
-              "fileName": "Middle_subcatchment_temperatureAndPrecipitation",
-              "mandatory": false,
-              "generated": true
+              "fileName": "PERSiST_Middle",
+              "mandatory": true,
+              "generated": false
             },
             "runoffToReach": {
               "fileName": "Middle_subcatchment_runoffToReach",
@@ -555,9 +545,9 @@
               "generated": true
             },
             "temperatureAndPrecipitation": {
-              "fileName": "Lower_subcatchment_temperatureAndPrecipitation",
-              "mandatory": false,
-              "generated": true
+              "fileName": "PERSiST_Lower",
+              "mandatory": true,
+              "generated": false
             },
             "runoffToReach": {
               "fileName": "Lower_subcatchment_runoffToReach",

@@ -3,7 +3,7 @@
     "name": "Test",
     "abbreviation": "TT",
     "timeSeries": {
-      "folder": "Test"
+      "folder": "C:/Users/futter/Dropbox/Code/schemaTest/testData"
     },
     "HRUs": [
       {
@@ -17,7 +17,7 @@
               "generated": true
             },
             "temperatureAndPrecipitation": {
-              "fileName": "Upper_subcatchment_temperatureAndPrecipitation",
+              "fileName": "PERSiST_Top",
               "mandatory": false,
               "generated": true
             },
@@ -281,7 +281,7 @@
               "generated": true
             },
             "temperatureAndPrecipitation": {
-              "fileName": "Middle_subcatchment_temperatureAndPrecipitation",
+              "fileName": "PERSiST_Middle",
               "mandatory": false,
               "generated": true
             },
@@ -545,7 +545,7 @@
               "generated": true
             },
             "temperatureAndPrecipitation": {
-              "fileName": "Lower_subcatchment_temperatureAndPrecipitation",
+              "fileName": "PERSiST_Lower",
               "mandatory": false,
               "generated": true
             },
