@@ -1,0 +1,824 @@
+{
+  "catchment": {
+    "name": "Test",
+    "abbreviation": "TT",
+    "timeSeries": {
+      "folder": ".",
+      "solarRadiation": {
+        "fileName": "Test_catchment_solarRadiation",
+        "mandatory": true,
+        "generated": false
+      },
+      "temperatureAndPrecipitation": {
+        "fileName": "Test_catchment_temperatureAndPrecipitation",
+        "mandatory": true,
+        "generated": false
+      }
+    },
+    "HRUs": [
+      {
+        "name": "Upper",
+        "abbreviation": "U",
+        "timeSeries": {
+          "subcatchment": {
+            "solarRadiation": {
+              "fileName": "Upper_subcatchment_solarRadiation",
+              "mandatory": false,
+              "generated": true
+            },
+            "temperatureAndPrecipitation": {
+              "fileName": "Upper_subcatchment_temperatureAndPrecipitation",
+              "mandatory": false,
+              "generated": true
+            },
+            "runoffToReach": {
+              "fileName": "Upper_subcatchment_runoffToReach",
+              "mandatory": false,
+              "generated": true
+            },
+            "landCoverTypes": [
+              {
+                "name": "Forest",
+                "abbreviation": "F",
+                "timeSeries": {
+                  "potentialEvapotranspiration": {
+                    "fileName": "Upper_Forest_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "waterOutputs": {
+                    "fileName": "Upper_Forest_waterOutputs",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "buckets": [
+                    {
+                      "name": "Direct Runoff",
+                      "abbreviation": "DR",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Upper_Forest_Direct_Runoff_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Upper_Forest_Direct_Runoff_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Upper_Forest_Direct_Runoff_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Upper_Forest_Direct_Runoff_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Upper_Forest_Direct_Runoff_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Soilwater",
+                      "abbreviation": "SW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Upper_Forest_Soilwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Upper_Forest_Soilwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Upper_Forest_Soilwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Upper_Forest_Soilwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Upper_Forest_Soilwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Groundwater",
+                      "abbreviation": "GW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Upper_Forest_Groundwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Upper_Forest_Groundwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Upper_Forest_Groundwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Upper_Forest_Groundwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Upper_Forest_Groundwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "Agriculture",
+                "abbreviation": "A",
+                "timeSeries": {
+                  "potentialEvapotranspiration": {
+                    "fileName": "Upper_Agriculture_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "waterOutputs": {
+                    "fileName": "Upper_Agriculture_waterOutputs",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "buckets": [
+                    {
+                      "name": "Direct Runoff",
+                      "abbreviation": "DR",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Upper_Agriculture_Direct_Runoff_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Upper_Agriculture_Direct_Runoff_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Upper_Agriculture_Direct_Runoff_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Upper_Agriculture_Direct_Runoff_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Upper_Agriculture_Direct_Runoff_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Soilwater",
+                      "abbreviation": "SW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Upper_Agriculture_Soilwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Upper_Agriculture_Soilwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Upper_Agriculture_Soilwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Upper_Agriculture_Soilwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Upper_Agriculture_Soilwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Groundwater",
+                      "abbreviation": "GW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Upper_Agriculture_Groundwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Upper_Agriculture_Groundwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Upper_Agriculture_Groundwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Upper_Agriculture_Groundwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Upper_Agriculture_Groundwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "reach": {
+            "flow": {
+              "fileName": "Upper_reach_flow",
+              "mandatory": false,
+              "generated": true
+            },
+            "abstraction": {
+              "fileName": "Upper_reach_abstraction",
+              "mandatory": false,
+              "generated": true
+            },
+            "effluent": {
+              "fileName": "Upper_reach_effluent",
+              "mandatory": false,
+              "generated": true
+            }
+          }
+        }
+      },
+      {
+        "name": "Middle",
+        "abbreviation": "M",
+        "timeSeries": {
+          "subcatchment": {
+            "solarRadiation": {
+              "fileName": "Middle_subcatchment_solarRadiation",
+              "mandatory": false,
+              "generated": true
+            },
+            "temperatureAndPrecipitation": {
+              "fileName": "Middle_subcatchment_temperatureAndPrecipitation",
+              "mandatory": false,
+              "generated": true
+            },
+            "runoffToReach": {
+              "fileName": "Middle_subcatchment_runoffToReach",
+              "mandatory": false,
+              "generated": true
+            },
+            "landCoverTypes": [
+              {
+                "name": "Forest",
+                "abbreviation": "F",
+                "timeSeries": {
+                  "potentialEvapotranspiration": {
+                    "fileName": "Middle_Forest_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "waterOutputs": {
+                    "fileName": "Middle_Forest_waterOutputs",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "buckets": [
+                    {
+                      "name": "Direct Runoff",
+                      "abbreviation": "DR",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Middle_Forest_Direct_Runoff_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Middle_Forest_Direct_Runoff_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Middle_Forest_Direct_Runoff_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Middle_Forest_Direct_Runoff_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Middle_Forest_Direct_Runoff_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Soilwater",
+                      "abbreviation": "SW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Middle_Forest_Soilwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Middle_Forest_Soilwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Middle_Forest_Soilwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Middle_Forest_Soilwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Middle_Forest_Soilwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Groundwater",
+                      "abbreviation": "GW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Middle_Forest_Groundwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Middle_Forest_Groundwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Middle_Forest_Groundwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Middle_Forest_Groundwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Middle_Forest_Groundwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "Agriculture",
+                "abbreviation": "A",
+                "timeSeries": {
+                  "potentialEvapotranspiration": {
+                    "fileName": "Middle_Agriculture_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "waterOutputs": {
+                    "fileName": "Middle_Agriculture_waterOutputs",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "buckets": [
+                    {
+                      "name": "Direct Runoff",
+                      "abbreviation": "DR",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Middle_Agriculture_Direct_Runoff_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Middle_Agriculture_Direct_Runoff_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Middle_Agriculture_Direct_Runoff_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Middle_Agriculture_Direct_Runoff_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Middle_Agriculture_Direct_Runoff_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Soilwater",
+                      "abbreviation": "SW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Middle_Agriculture_Soilwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Middle_Agriculture_Soilwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Middle_Agriculture_Soilwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Middle_Agriculture_Soilwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Middle_Agriculture_Soilwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Groundwater",
+                      "abbreviation": "GW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Middle_Agriculture_Groundwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Middle_Agriculture_Groundwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Middle_Agriculture_Groundwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Middle_Agriculture_Groundwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Middle_Agriculture_Groundwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "reach": {
+            "flow": {
+              "fileName": "Middle_reach_flow",
+              "mandatory": false,
+              "generated": true
+            },
+            "abstraction": {
+              "fileName": "Middle_reach_abstraction",
+              "mandatory": false,
+              "generated": true
+            },
+            "effluent": {
+              "fileName": "Middle_reach_effluent",
+              "mandatory": false,
+              "generated": true
+            }
+          }
+        }
+      },
+      {
+        "name": "Lower",
+        "abbreviation": "L",
+        "timeSeries": {
+          "subcatchment": {
+            "solarRadiation": {
+              "fileName": "Lower_subcatchment_solarRadiation",
+              "mandatory": false,
+              "generated": true
+            },
+            "temperatureAndPrecipitation": {
+              "fileName": "Lower_subcatchment_temperatureAndPrecipitation",
+              "mandatory": false,
+              "generated": true
+            },
+            "runoffToReach": {
+              "fileName": "Lower_subcatchment_runoffToReach",
+              "mandatory": false,
+              "generated": true
+            },
+            "landCoverTypes": [
+              {
+                "name": "Forest",
+                "abbreviation": "F",
+                "timeSeries": {
+                  "potentialEvapotranspiration": {
+                    "fileName": "Lower_Forest_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "waterOutputs": {
+                    "fileName": "Lower_Forest_waterOutputs",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "buckets": [
+                    {
+                      "name": "Direct Runoff",
+                      "abbreviation": "DR",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Lower_Forest_Direct_Runoff_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Lower_Forest_Direct_Runoff_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Lower_Forest_Direct_Runoff_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Lower_Forest_Direct_Runoff_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Lower_Forest_Direct_Runoff_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Soilwater",
+                      "abbreviation": "SW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Lower_Forest_Soilwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Lower_Forest_Soilwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Lower_Forest_Soilwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Lower_Forest_Soilwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Lower_Forest_Soilwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Groundwater",
+                      "abbreviation": "GW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Lower_Forest_Groundwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Lower_Forest_Groundwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Lower_Forest_Groundwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Lower_Forest_Groundwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Lower_Forest_Groundwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "Agriculture",
+                "abbreviation": "A",
+                "timeSeries": {
+                  "potentialEvapotranspiration": {
+                    "fileName": "Lower_Agriculture_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "waterOutputs": {
+                    "fileName": "Lower_Agriculture_waterOutputs",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "buckets": [
+                    {
+                      "name": "Direct Runoff",
+                      "abbreviation": "DR",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Lower_Agriculture_Direct_Runoff_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Lower_Agriculture_Direct_Runoff_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Lower_Agriculture_Direct_Runoff_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Lower_Agriculture_Direct_Runoff_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Lower_Agriculture_Direct_Runoff_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Soilwater",
+                      "abbreviation": "SW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Lower_Agriculture_Soilwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Lower_Agriculture_Soilwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Lower_Agriculture_Soilwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Lower_Agriculture_Soilwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Lower_Agriculture_Soilwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "Groundwater",
+                      "abbreviation": "GW",
+                      "timeSeries": {
+                        "actualEvapotranspiration": {
+                          "fileName": "Lower_Agriculture_Groundwater_actualEvapotranspiration",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterLevel": {
+                          "fileName": "Lower_Agriculture_Groundwater_waterLevel",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "soilTemperature": {
+                          "fileName": "Lower_Agriculture_Groundwater_soilTemperature",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterInputs": {
+                          "fileName": "Lower_Agriculture_Groundwater_waterInputs",
+                          "mandatory": false,
+                          "generated": true
+                        },
+                        "waterOutputs": {
+                          "fileName": "Lower_Agriculture_Groundwater_waterOutputs",
+                          "mandatory": false,
+                          "generated": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "reach": {
+            "flow": {
+              "fileName": "Lower_reach_flow",
+              "mandatory": false,
+              "generated": true
+            },
+            "abstraction": {
+              "fileName": "Lower_reach_abstraction",
+              "mandatory": false,
+              "generated": true
+            },
+            "effluent": {
+              "fileName": "Lower_reach_effluent",
+              "mandatory": false,
+              "generated": true
+            }
+          }
+        }
+      }
+    ]
+  },
+  "summary": {
+    "totalHRUs": 3,
+    "generatedFrom": {
+      "schemas": "schemas.json",
+      "timeSeries": "timeSeries.json",
+      "generatedNames": "generatedNames.json"
+    },
+    "totalLandCoverTypes": 6,
+    "totalBuckets": 18,
+    "totalParticleSizeClasses": 0
+  }
+}
