@@ -10,9 +10,7 @@
         "folder": {
             "type": "string",
             "description": "valid folder name for storing all time series results"
-        },
-        "solarRadiation":               { "$ref": "#/defs/timeSeries"},
-        "temperatureAndPrecipitation":  { "$ref": "#/defs/timeSeries"}
+        }
     },
     "landCoverType": {
         "potentialEvapotranspiration":  { "$ref": "#/defs/timeSeries"},

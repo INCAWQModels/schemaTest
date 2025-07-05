@@ -3,17 +3,7 @@
     "name": "Test",
     "abbreviation": "TT",
     "timeSeries": {
-      "folder": "Test",
-      "solarRadiation": {
-        "fileName": "Test_catchment_solarRadiation",
-        "mandatory": true,
-        "generated": false
-      },
-      "temperatureAndPrecipitation": {
-        "fileName": "Test_catchment_temperatureAndPrecipitation",
-        "mandatory": true,
-        "generated": false
-      }
+      "folder": "Test"
     },
     "HRUs": [
       {
