@@ -1,0 +1,14 @@
+{
+    "uuid": "888dcc04-5f90-4aec-98e0-9e3976f477c2",
+    "source_file": "PERSiST.dat",
+    "source_file_full_path": "C:\\Users\\futter\\Dropbox\\Code\\schemaTest\\testData\\PERSiST.dat",
+    "reach_identifier": "Top",
+    "creation_date": "2025-07-05T11:50:45.530075",
+    "start_datetime": "2010-01-01T00:00:00",
+    "timestep_seconds": 86400,
+    "timestep_description": "86400 seconds",
+    "num_records": 1461,
+    "data_type": "PERSiST climate data",
+    "precipitation_units": "mm/timestep",
+    "temperature_units": "degrees Celsius"
+}
