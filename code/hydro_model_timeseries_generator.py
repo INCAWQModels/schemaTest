@@ -16,6 +16,8 @@ import sys
 import json
 import csv
 import datetime
+import math
+import uuid
 import tkinter as tk
 from tkinter import messagebox, filedialog
 
@@ -297,7 +299,8 @@ class HydrologicalTimeSeriesGenerator:
             from calculate_solar_radiation import compute_radiation_timeseries
         except ImportError:
             print("Error: Could not import solar radiation calculation module")
-            return False
+            print("Falling back to built-in solar radiation calculation...")
+            return self.generate_solar_radiation_builtin()
         
         for hru_info in self.hru_timeseries_info:
             hru_name = hru_info['hru_name']
@@ -308,26 +311,40 @@ class HydrologicalTimeSeriesGenerator:
             latitude = coordinates.get('decimalLatitude', 45.0)
             longitude = coordinates.get('decimalLongitude', -15.0)
             
-            print(f"  Coordinates: {latitude}°N, {longitude}°W")
+            # Handle longitude convention: schema says "west positive" but standard is "east positive"
+            # If longitude is negative in "west positive" system, convert to standard system
+            if longitude < 0:
+                longitude = -longitude  # Convert from "west positive" to standard "east positive"
+            
+            print(f"  Coordinates: {latitude}°N, {longitude}°E (converted from west-positive)")
             
             # Get time series parameters
             start_dt = hru_info['start_datetime']
             timestep_seconds = hru_info['timestep_seconds']
             num_records = hru_info['num_records']
             
-            # Calculate end time
-            end_dt = start_dt + datetime.timedelta(seconds=(num_records - 1) * timestep_seconds)
+            # Calculate solar radiation at the midpoint between adjacent time periods
+            # This ensures consistency across all timestep sizes
+            midpoint_offset = timestep_seconds // 2  # Half the timestep
+            adjusted_start = start_dt + datetime.timedelta(seconds=midpoint_offset)
             
-            # Assume timezone offset of 0 (UTC) - could be made configurable
-            timezone_offset = 0
+            print(f"  Calculating at midpoint: {adjusted_start.time()} (+ {midpoint_offset//3600}h {(midpoint_offset%3600)//60}m from period start)")
             
-            print(f"  Time range: {start_dt} to {end_dt}")
+            # Calculate end time based on adjusted start
+            end_dt = adjusted_start + datetime.timedelta(seconds=(num_records - 1) * timestep_seconds)
+            
+            # Estimate timezone offset based on longitude (rough approximation)
+            # Each 15 degrees of longitude = 1 hour of time difference
+            timezone_offset = longitude / 15.0
+            
+            print(f"  Time range: {adjusted_start} to {end_dt}")
             print(f"  Timestep: {timestep_seconds} seconds")
+            print(f"  Estimated timezone offset: {timezone_offset:.1f} hours")
             
             # Generate solar radiation time series
             try:
                 solar_ts = compute_radiation_timeseries(
-                    start_time=start_dt,
+                    start_time=adjusted_start,
                     end_time=end_dt,
                     step_seconds=timestep_seconds,
                     latitude=latitude,
@@ -355,6 +372,124 @@ class HydrologicalTimeSeriesGenerator:
                 json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
                 
                 solar_ts.save_to_files(output_filename, self.base_folder)
+                
+                print(f"  ✓ Generated: {csv_output_path}")
+                print(f"  ✓ Metadata: {json_output_path}")
+                
+            except Exception as e:
+                print(f"Error generating solar radiation for {hru_name}: {e}")
+                return False
+        
+        print("\n✓ Solar radiation generation completed successfully")
+        return True
+    
+    def generate_solar_radiation_builtin(self):
+        """Generate solar radiation using built-in calculation (fallback method)."""
+        print("Using built-in solar radiation calculation...")
+        
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            print(f"\nGenerating solar radiation for {hru_name}...")
+            
+            # Get coordinates
+            coordinates = hru_info['coordinates']
+            latitude = coordinates.get('decimalLatitude', 45.0)
+            longitude = coordinates.get('decimalLongitude', -15.0)
+            
+            # Handle longitude convention
+            if longitude < 0:
+                longitude = -longitude
+            
+            print(f"  Coordinates: {latitude}°N, {longitude}°E")
+            
+            # Get time series parameters
+            start_dt = hru_info['start_datetime']
+            timestep_seconds = hru_info['timestep_seconds']
+            num_records = hru_info['num_records']
+            
+            # Calculate solar radiation at the midpoint between adjacent time periods
+            midpoint_offset = timestep_seconds // 2
+            adjusted_start = start_dt + datetime.timedelta(seconds=midpoint_offset)
+            
+            timezone_offset = longitude / 15.0
+            
+            print(f"  Using built-in calculation at midpoint: {adjusted_start.time()}")
+            
+            # Create output files using built-in calculation
+            try:
+                # Create a simple TimeSeries-like structure
+                solar_data = []
+                current_time = adjusted_start
+                
+                for i in range(num_records):
+                    # Simple solar radiation calculation
+                    day_of_year = current_time.timetuple().tm_yday
+                    hour = current_time.hour + current_time.minute / 60.0
+                    
+                    # Basic solar calculation (simplified)
+                    declination = 23.45 * math.sin(math.radians(360 * (284 + day_of_year) / 365))
+                    solar_time = hour + (longitude / 15) - timezone_offset
+                    hour_angle = 15 * (solar_time - 12)
+                    
+                    lat_rad = math.radians(latitude)
+                    decl_rad = math.radians(declination)
+                    ha_rad = math.radians(hour_angle)
+                    
+                    elevation = math.asin(
+                        math.sin(lat_rad) * math.sin(decl_rad) +
+                        math.cos(lat_rad) * math.cos(decl_rad) * math.cos(ha_rad)
+                    )
+                    elevation_deg = math.degrees(elevation)
+                    
+                    if elevation_deg > 0:
+                        G_sc = 1367  # Solar constant
+                        etr = G_sc * (1 + 0.033 * math.cos(math.radians(360 * day_of_year / 365)))
+                        solar_rad = etr * 0.75 * math.sin(elevation)  # 0.75 = transmittance
+                    else:
+                        solar_rad = 0
+                    
+                    solar_data.append([current_time.isoformat(), hru_name, solar_rad])
+                    current_time += datetime.timedelta(seconds=timestep_seconds)
+                
+                # Find output file name
+                output_filename = None
+                for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                    if ts_hru['name'] == hru_name:
+                        try:
+                            solar_info = ts_hru['timeSeries']['subcatchment']['solarRadiation']
+                            output_filename = solar_info['fileName']
+                            break
+                        except KeyError:
+                            pass
+                
+                if not output_filename:
+                    output_filename = f"{hru_name}_subcatchment_solarRadiation"
+                
+                # Write CSV file
+                csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                with open(csv_output_path, 'w', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    # Use a simple header
+                    writer.writerow(['timestamp', 'location', 'solar_radiation'])
+                    writer.writerows(solar_data)
+                
+                # Write JSON metadata
+                json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                metadata = {
+                    'uuid': str(uuid.uuid4()),
+                    'latitude': str(latitude),
+                    'longitude': str(longitude),
+                    'source': 'Built-in solar radiation calculation',
+                    'generation_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'location_id': hru_name,
+                    'timezone_offset': str(timezone_offset),
+                    'start_time': adjusted_start.isoformat(),
+                    'timestep_seconds': str(timestep_seconds),
+                    'num_records': str(num_records)
+                }
+                
+                with open(json_output_path, 'w', encoding='utf-8') as jsonfile:
+                    json.dump(metadata, jsonfile, indent=4)
                 
                 print(f"  ✓ Generated: {csv_output_path}")
                 print(f"  ✓ Metadata: {json_output_path}")

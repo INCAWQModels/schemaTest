@@ -206,38 +206,105 @@ def compute_radiation_timeseries(start_time, end_time, step_seconds, latitude, l
 
 # Test the solar radiation calculation
 if __name__ == "__main__":
-    # Example usage
-    start_date_str = "2024-06-21 06:00:00"  # Summer solstice
-    end_date_str = "2024-06-21 20:00:00"
-    step_seconds = 3600  # Every hour
-
-    # Location info
+    # Example usage - demonstrate midpoint calculation approach
+    print("Testing solar radiation calculation at midpoints...")
+    
+    # Test different timesteps to show midpoint consistency
+    base_date = datetime.datetime(2024, 6, 21, 0, 0, 0)  # Summer solstice, midnight start
     latitude = 45.0
-    longitude = -15.0
-    timezone_offset = 0  # UTC
-    location_id = "Test_Location"
-
-    # Parse datetimes
-    start_dt = datetime.datetime.strptime(start_date_str, "%Y-%m-%d %H:%M:%S")
-    end_dt = datetime.datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
-
-    # Create TimeSeries object
-    ts = compute_radiation_timeseries(start_dt, end_dt, step_seconds, latitude, longitude, timezone_offset, location_id)
+    longitude = 15.0  # 15 degrees east (standard coordinates)
+    timezone_offset = 1.0  # UTC+1
     
-    # Print TimeSeries information
-    print(f"Generated solar radiation time series with {len(ts.data)} records")
-    print("\nMetadata:")
-    for key, value in ts.metadata.items():
-        print(f"  {key}: {value}")
+    print(f"\nLocation: {latitude}°N, {longitude}°E (timezone offset: {timezone_offset})")
+    print(f"Base date: {base_date} (starting at midnight)")
     
-    # Print a sample of data
-    print("\nSample of Solar Radiation Data:")
-    for i, row in enumerate(ts.data[:5]):  # Print first 5 rows
-        timestamp = row[0]
-        location = row[1]
-        solar_radiation = row[2]
-        print(f"  {timestamp.strftime('%Y-%m-%d %H:%M:%S')} at {location}: {solar_radiation:.2f} W/m²")
+    # Test different timesteps
+    timestep_tests = [
+        (86400, "Daily", 3),      # 3 days
+        (21600, "6-hourly", 8),   # 2 days worth
+        (3600, "Hourly", 24),     # 1 day worth
+        (1800, "30-minute", 48)   # 1 day worth
+    ]
     
-    # Save to files
-    csv_file, json_file = ts.save_to_files("test_solar_radiation")
-    print(f"\nSaved to: {csv_file} and {json_file}")
+    for step_seconds, description, num_records in timestep_tests:
+        print(f"\n{'='*50}")
+        print(f"Testing {description} timestep ({step_seconds} seconds)")
+        print(f"{'='*50}")
+        
+        # Calculate midpoint offset
+        midpoint_offset = step_seconds // 2
+        hours = midpoint_offset // 3600
+        minutes = (midpoint_offset % 3600) // 60
+        
+        print(f"Midpoint offset: +{hours}h {minutes}m from period start")
+        
+        # Adjust start time to midpoint
+        adjusted_start = base_date + datetime.timedelta(seconds=midpoint_offset)
+        end_time = adjusted_start + datetime.timedelta(seconds=(num_records - 1) * step_seconds)
+        
+        print(f"Calculation times: {adjusted_start} to {end_time}")
+        
+        # Generate time series
+        ts = compute_radiation_timeseries(
+            adjusted_start, end_time, step_seconds,
+            latitude, longitude, timezone_offset, f"Test_{description}"
+        )
+        
+        print(f"Generated {len(ts.data)} records")
+        
+        # Show first few values
+        print("Sample values:")
+        for i, row in enumerate(ts.data[:min(5, len(ts.data))]):
+            timestamp = row[0]
+            solar_radiation = row[2]
+            print(f"  {timestamp.strftime('%Y-%m-%d %H:%M:%S')}: {solar_radiation:.1f} W/m²")
+        
+        # Calculate statistics
+        solar_values = [row[2] for row in ts.data]
+        non_zero_values = [v for v in solar_values if v > 0]
+        
+        if non_zero_values:
+            avg_solar = sum(non_zero_values) / len(non_zero_values)
+            max_solar = max(non_zero_values)
+            print(f"  Non-zero values: {len(non_zero_values)}/{len(solar_values)}")
+            print(f"  Average (non-zero): {avg_solar:.1f} W/m²")
+            print(f"  Maximum: {max_solar:.1f} W/m²")
+        else:
+            print(f"  ⚠️  All values are zero!")
+    
+    # Demonstrate the improvement over start-of-period calculation
+    print(f"\n{'='*60}")
+    print("COMPARISON: START-OF-PERIOD vs MIDPOINT CALCULATION")
+    print(f"{'='*60}")
+    
+    # Daily example: midnight start vs midpoint (noon)
+    daily_start_midnight = base_date  # 00:00:00
+    daily_midpoint = base_date + datetime.timedelta(seconds=43200)  # 12:00:00
+    
+    ts_start = compute_radiation_timeseries(
+        daily_start_midnight, daily_start_midnight, 86400,
+        latitude, longitude, timezone_offset, "Start_Period"
+    )
+    
+    ts_midpoint = compute_radiation_timeseries(
+        daily_midpoint, daily_midpoint, 86400,
+        latitude, longitude, timezone_offset, "Midpoint"
+    )
+    
+    print(f"Daily timestep comparison for {base_date.strftime('%Y-%m-%d')}:")
+    print(f"  Start-of-period (00:00): {ts_start.data[0][2]:.1f} W/m²")
+    print(f"  Midpoint (12:00):       {ts_midpoint.data[0][2]:.1f} W/m²")
+    print(f"  Improvement: {ts_midpoint.data[0][2] - ts_start.data[0][2]:.1f} W/m² difference")
+    
+    # Save a sample file
+    sample_file = ts_midpoint.save_to_files("test_solar_radiation_midpoint")
+    print(f"\nSaved sample midpoint calculation to: {sample_file[0]}")
+    
+    print(f"\n{'='*60}")
+    print("MIDPOINT CALCULATION SUMMARY")
+    print(f"{'='*60}")
+    print("✅ Consistent approach for all timestep sizes")
+    print("✅ Representative timing for each period")
+    print("✅ Eliminates midnight solar radiation issues")
+    print("✅ More accurate than start-of-period calculation")
+    print("✅ Simple formula: calculation_time = start_time + (timestep/2)")

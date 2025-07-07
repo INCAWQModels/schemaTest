@@ -1,13 +1,13 @@
 {
-    "uuid": "3912cdb5-90b3-4f78-9ae7-54b73d3242b4",
+    "uuid": "18f097b3-0f05-4be3-975b-e557cb2561ef",
     "latitude": "45.0",
-    "longitude": "-15.0",
+    "longitude": "15.0",
     "source": "Python solar radiation model (standalone)",
-    "generation_time": "2025-07-07 12:51:11",
+    "generation_time": "2025-07-07 16:23:25",
     "location_id": "Upper",
-    "timezone_offset": "0",
-    "start_time": "2010-01-01T00:00:00",
-    "end_time": "2013-12-31T00:00:00",
+    "timezone_offset": "1.0",
+    "start_time": "2010-01-01T12:00:00",
+    "end_time": "2013-12-31T12:00:00",
     "step_seconds": "86400",
     "num_records": "1461"
 }
