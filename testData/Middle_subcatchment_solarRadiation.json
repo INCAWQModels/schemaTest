@@ -1,0 +1,13 @@
+{
+    "uuid": "ef358080-19e7-4cf8-94e0-db5d133269d5",
+    "latitude": "45.0",
+    "longitude": "-15.0",
+    "source": "Python solar radiation model (standalone)",
+    "generation_time": "2025-07-07 12:51:11",
+    "location_id": "Middle",
+    "timezone_offset": "0",
+    "start_time": "2010-01-01T00:00:00",
+    "end_time": "2013-12-31T00:00:00",
+    "step_seconds": "86400",
+    "num_records": "1461"
+}
