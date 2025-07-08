@@ -709,6 +709,12 @@ class HydrologicalTimeSeriesGenerator:
                     # Track snowpack depth for this landcover type
                     snowpack_depth = initial_depth
                     
+                    # Get timestep scaling factor from metadata
+                    timestep_seconds = hru_info['timestep_seconds']
+                    timestep_scale_factor = timestep_seconds / 86400.0  # Scale from daily to actual timestep
+                    
+                    logger.info(f"      Using timestep: {timestep_seconds}s (scale factor: {timestep_scale_factor:.4f})")
+                    
                     for data_point in temp_precip_data:
                         timestamp = data_point['timestamp']
                         location = data_point['location']
@@ -727,10 +733,10 @@ class HydrologicalTimeSeriesGenerator:
                             rain_depth = 0.0
                             snowfall_depth = snow_mult_lc * snow_mult_sc * precipitation
                         
-                        # Calculate snowmelt using degree day model
+                        # Calculate snowmelt using degree day model with timestep scaling
                         if temperature > melt_temp:
-                            # Potential melt
-                            potential_melt = melt_rate * (temperature - melt_temp)
+                            # Potential melt scaled by timestep
+                            potential_melt = melt_rate * (temperature - melt_temp) * timestep_scale_factor
                             
                             # Actual melt is limited by available snow (previous snowpack + new snowfall)
                             available_snow = snowpack_depth + snowfall_depth
@@ -800,6 +806,7 @@ class HydrologicalTimeSeriesGenerator:
                         'description': f'Rain and snow dynamics for {hru_name} - {lc_name}',
                         'start_datetime': hru_info['start_datetime'].isoformat(),
                         'timestep_seconds': hru_info['timestep_seconds'],
+                        'timestep_scale_factor': timestep_scale_factor,
                         'num_records': len(rain_snow_data),
                         'hru_name': hru_name,
                         'land_cover_type': lc_name,
@@ -818,7 +825,8 @@ class HydrologicalTimeSeriesGenerator:
                             'snowpack_depth': 'mm_SWE',
                             'snowmelt_depth': 'mm'
                         },
-                        'calculation_method': 'degree-day snowmelt model with scaling factors'
+                        'calculation_method': 'degree-day snowmelt model with timestep scaling and landcover factors',
+                        'formula': 'snowmelt = degree_day_melt_rate * (T - melt_temp) * (timestep_seconds / 86400)'
                     }
                     
                     # Write JSON file

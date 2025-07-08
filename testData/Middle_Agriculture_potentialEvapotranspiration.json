@@ -5,8 +5,8 @@
     "num_records": 1461,
     "hru_name": "Middle",
     "land_cover_type": "Agriculture",
-    "degree_offset": 0.0,
-    "solar_scaling": 60.0,
+    "degree_offset": 4.0,
+    "solar_scaling": 150.0,
     "units": "mm/day",
     "calculation_method": "simple temperature-based"
 }

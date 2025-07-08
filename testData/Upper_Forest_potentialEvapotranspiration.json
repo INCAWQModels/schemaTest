@@ -5,7 +5,7 @@
     "num_records": 1461,
     "hru_name": "Upper",
     "land_cover_type": "Forest",
-    "degree_offset": 0.0,
+    "degree_offset": 5.0,
     "solar_scaling": 60.0,
     "units": "mm/day",
     "calculation_method": "simple temperature-based"

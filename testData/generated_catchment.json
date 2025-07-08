@@ -18,7 +18,7 @@
                         "snowfallMultiplier": 1.0,
                         "evaporation": {
                             "canopyInterception": 0.0,
-                            "growingDegreeOffset": 0.0,
+                            "growingDegreeOffset": 5.0,
                             "solarRadiationScalingFactor": 60.0
                         },
                         "snowpack": {
@@ -35,7 +35,7 @@
                             {
                                 "name": "Direct Runoff",
                                 "abbreviation": "DR",
-                                "receivesPrecipitation": false,
+                                "receivesPrecipitation": true,
                                 "useInSMDCalculation": false,
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
@@ -57,8 +57,8 @@
                                     "freelyDraining": 700.0
                                 },
                                 "connections": [
-                                    0.0,
-                                    0.5,
+                                    0.2,
+                                    0.8,
                                     0.0
                                 ]
                             },
@@ -88,7 +88,7 @@
                                 },
                                 "connections": [
                                     0.0,
-                                    0.0,
+                                    0.5,
                                     0.5
                                 ]
                             },
@@ -100,7 +100,7 @@
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
                                 "droughtRunoffFraction": 0.0,
-                                "characteristicTimeConstant": 10.0,
+                                "characteristicTimeConstant": 80.0,
                                 "evaporation": {
                                     "droughtAdjustment": 1.0,
                                     "relativeAmountIndex": 0.0
@@ -119,7 +119,7 @@
                                 "connections": [
                                     0.0,
                                     0.0,
-                                    0.0
+                                    1.0
                                 ]
                             }
                         ],
@@ -136,8 +136,8 @@
                         "snowfallMultiplier": 1.0,
                         "evaporation": {
                             "canopyInterception": 0.0,
-                            "growingDegreeOffset": 0.0,
-                            "solarRadiationScalingFactor": 60.0
+                            "growingDegreeOffset": 3.0,
+                            "solarRadiationScalingFactor": 150.0
                         },
                         "snowpack": {
                             "depth": 0.0,
@@ -175,8 +175,8 @@
                                     "freelyDraining": 700.0
                                 },
                                 "connections": [
-                                    0.0,
-                                    0.5,
+                                    0.1,
+                                    0.9,
                                     0.0
                                 ]
                             },
@@ -206,8 +206,8 @@
                                 },
                                 "connections": [
                                     0.0,
-                                    0.0,
-                                    0.5
+                                    0.3,
+                                    0.7
                                 ]
                             },
                             {
@@ -218,7 +218,7 @@
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
                                 "droughtRunoffFraction": 0.0,
-                                "characteristicTimeConstant": 10.0,
+                                "characteristicTimeConstant": 100.0,
                                 "evaporation": {
                                     "droughtAdjustment": 1.0,
                                     "relativeAmountIndex": 0.0
@@ -237,7 +237,7 @@
                                 "connections": [
                                     0.0,
                                     0.0,
-                                    0.0
+                                    1.0
                                 ]
                             }
                         ],
@@ -258,7 +258,7 @@
             "reach": {
                 "flow": 1.0,
                 "dimensions": {
-                    "length": 100.0,
+                    "length": 10000.0,
                     "widthAtSedimentSurface": 1.0,
                     "slope": 0.0001
                 },
@@ -306,7 +306,7 @@
                             {
                                 "name": "Direct Runoff",
                                 "abbreviation": "DR",
-                                "receivesPrecipitation": false,
+                                "receivesPrecipitation": true,
                                 "useInSMDCalculation": false,
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
@@ -328,7 +328,7 @@
                                     "freelyDraining": 700.0
                                 },
                                 "connections": [
-                                    0.0,
+                                    0.5,
                                     0.5,
                                     0.0
                                 ]
@@ -359,7 +359,7 @@
                                 },
                                 "connections": [
                                     0.0,
-                                    0.0,
+                                    0.5,
                                     0.5
                                 ]
                             },
@@ -371,7 +371,7 @@
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
                                 "droughtRunoffFraction": 0.0,
-                                "characteristicTimeConstant": 10.0,
+                                "characteristicTimeConstant": 70.0,
                                 "evaporation": {
                                     "droughtAdjustment": 1.0,
                                     "relativeAmountIndex": 0.0
@@ -390,7 +390,7 @@
                                 "connections": [
                                     0.0,
                                     0.0,
-                                    0.0
+                                    1.0
                                 ]
                             }
                         ],
@@ -407,8 +407,8 @@
                         "snowfallMultiplier": 1.0,
                         "evaporation": {
                             "canopyInterception": 0.0,
-                            "growingDegreeOffset": 0.0,
-                            "solarRadiationScalingFactor": 60.0
+                            "growingDegreeOffset": 4.0,
+                            "solarRadiationScalingFactor": 150.0
                         },
                         "snowpack": {
                             "depth": 0.0,
@@ -424,7 +424,7 @@
                             {
                                 "name": "Direct Runoff",
                                 "abbreviation": "DR",
-                                "receivesPrecipitation": false,
+                                "receivesPrecipitation": true,
                                 "useInSMDCalculation": false,
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
@@ -446,8 +446,8 @@
                                     "freelyDraining": 700.0
                                 },
                                 "connections": [
-                                    0.0,
-                                    0.5,
+                                    0.2,
+                                    0.8,
                                     0.0
                                 ]
                             },
@@ -477,8 +477,8 @@
                                 },
                                 "connections": [
                                     0.0,
-                                    0.0,
-                                    0.5
+                                    0.6,
+                                    0.4
                                 ]
                             },
                             {
@@ -489,7 +489,7 @@
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
                                 "droughtRunoffFraction": 0.0,
-                                "characteristicTimeConstant": 10.0,
+                                "characteristicTimeConstant": 90.0,
                                 "evaporation": {
                                     "droughtAdjustment": 1.0,
                                     "relativeAmountIndex": 0.0
@@ -508,7 +508,7 @@
                                 "connections": [
                                     0.0,
                                     0.0,
-                                    0.0
+                                    1.0
                                 ]
                             }
                         ],
@@ -642,7 +642,7 @@
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
                                 "droughtRunoffFraction": 0.0,
-                                "characteristicTimeConstant": 10.0,
+                                "characteristicTimeConstant": 80.0,
                                 "evaporation": {
                                     "droughtAdjustment": 1.0,
                                     "relativeAmountIndex": 0.0
@@ -678,8 +678,8 @@
                         "snowfallMultiplier": 1.0,
                         "evaporation": {
                             "canopyInterception": 0.0,
-                            "growingDegreeOffset": 0.0,
-                            "solarRadiationScalingFactor": 60.0
+                            "growingDegreeOffset": 4.0,
+                            "solarRadiationScalingFactor": 160.0
                         },
                         "snowpack": {
                             "depth": 0.0,
@@ -760,7 +760,7 @@
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
                                 "droughtRunoffFraction": 0.0,
-                                "characteristicTimeConstant": 10.0,
+                                "characteristicTimeConstant": 70.0,
                                 "evaporation": {
                                     "droughtAdjustment": 1.0,
                                     "relativeAmountIndex": 0.0

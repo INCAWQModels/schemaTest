@@ -192,7 +192,8 @@ def load_timeseries_from_files(csv_path, json_path):
 
 
 def calculate_rain_and_snow_with_params(temp_ts, precip_ts, subcatchment_params, landcover_params,
-                                       temp_column="temperature_c", precip_column="precipitation"):
+                                       temp_column="temperature_c", precip_column="precipitation", 
+                                       timestep_seconds=86400):
     """
     Calculate rain and snow dynamics using subcatchment and landcover-specific parameters.
     
@@ -203,6 +204,7 @@ def calculate_rain_and_snow_with_params(temp_ts, precip_ts, subcatchment_params,
     landcover_params: Dict with landcover-specific parameters
     temp_column: Name of temperature column
     precip_column: Name of precipitation column
+    timestep_seconds: Timestep in seconds for scaling snowmelt (default: 86400 for daily)
     
     Returns:
     TimeSeries with columns: air_temperature, snowfall_depth, rain_depth, 
@@ -232,6 +234,9 @@ def calculate_rain_and_snow_with_params(temp_ts, precip_ts, subcatchment_params,
     melt_temperature = landcover_params.get("snowpack", {}).get("meltTemperature", 0.0)
     degree_day_melt_rate = landcover_params.get("snowpack", {}).get("degreeDayMeltRate", 3.0)
     initial_snowpack = landcover_params.get("snowpack", {}).get("depth", 0.0)
+    
+    # Calculate timestep scaling factor for snowmelt
+    timestep_scale_factor = timestep_seconds / 86400.0  # Scale from daily to actual timestep
     
     # Find column indices
     temp_idx = temp_ts.columns.index(temp_column) if temp_column in temp_ts.columns else None
@@ -286,10 +291,10 @@ def calculate_rain_and_snow_with_params(temp_ts, precip_ts, subcatchment_params,
                 rain_depth = 0.0
                 snowfall_depth = landcover_snow_mult * subcatch_snow_mult * precipitation
             
-            # Calculate snowmelt using degree day model
+            # Calculate snowmelt using degree day model with timestep scaling
             if temperature > melt_temperature:
-                # Potential melt
-                potential_melt = degree_day_melt_rate * (temperature - melt_temperature)
+                # Potential melt scaled by timestep
+                potential_melt = degree_day_melt_rate * (temperature - melt_temperature) * timestep_scale_factor
                 
                 # Actual melt is limited by available snow (previous snowpack + new snowfall)
                 available_snow = snowpack_tracker[location] + snowfall_depth
@@ -322,6 +327,17 @@ def calculate_rain_and_snow_with_params(temp_ts, precip_ts, subcatchment_params,
     return output_ts
 
 
+def load_timestep_from_metadata(json_path):
+    """Load timestep information from JSON metadata file."""
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        return metadata.get('timestep_seconds', 86400)  # Default to daily if not found
+    except Exception as e:
+        print(f"Warning: Could not load timestep from {json_path}: {e}")
+        return 86400  # Default to daily timestep
+
+
 def load_catchment_parameters(catchment_file_path):
     """Load catchment parameters from JSON file."""
     try:
@@ -333,7 +349,7 @@ def load_catchment_parameters(catchment_file_path):
         return None
 
 
-def process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir=None):
+def process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir=None, timestep_json_path=None):
     """
     Process rain and snow calculations for all land cover types in all subcatchments.
     
@@ -342,11 +358,18 @@ def process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir=N
     precip_ts: Precipitation time series  
     catchment_data: Full catchment structure from JSON
     output_dir: Directory to save output files
+    timestep_json_path: Path to JSON file containing timestep information
     
     Returns:
     List of created output files
     """
     output_files = []
+    
+    # Load timestep information if provided
+    timestep_seconds = 86400  # Default to daily
+    if timestep_json_path:
+        timestep_seconds = load_timestep_from_metadata(timestep_json_path)
+        print(f"Using timestep: {timestep_seconds} seconds ({timestep_seconds/86400:.3f} days)")
     
     # Process each HRU
     for hru_idx, hru in enumerate(catchment_data.get("HRUs", [])):
@@ -359,9 +382,9 @@ def process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir=N
             
             print(f"Processing {hru_name} - {lc_name}")
             
-            # Calculate rain and snow for this combination
+            # Calculate rain and snow for this combination with timestep scaling
             result_ts = calculate_rain_and_snow_with_params(
-                temp_ts, precip_ts, subcatchment, landcover
+                temp_ts, precip_ts, subcatchment, landcover, timestep_seconds=timestep_seconds
             )
             
             # Add metadata
@@ -370,6 +393,8 @@ def process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir=N
             result_ts.add_metadata("calculation_type", "rain_and_snow_dynamics")
             result_ts.add_metadata("snow_offset", subcatchment.get("precipitationAdjustments", {}).get("snowOffset", 0.0))
             result_ts.add_metadata("melt_temperature", landcover.get("snowpack", {}).get("meltTemperature", 0.0))
+            result_ts.add_metadata("timestep_seconds", timestep_seconds)
+            result_ts.add_metadata("timestep_scale_factor", timestep_seconds / 86400.0)
             
             # Save to files
             base_name = f"{hru_name}_{lc_name}_rain_snow"
@@ -384,8 +409,8 @@ def process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir=N
 
 
 def test_rain_snow_calculation():
-    """Test function to demonstrate rain and snow calculation."""
-    print("Testing Rain and Snow calculation with landcover parameters...")
+    """Test function to demonstrate rain and snow calculation with timestep scaling."""
+    print("Testing Rain and Snow calculation with landcover parameters and timestep scaling...")
     
     # Create sample temperature and precipitation data
     start_date = datetime.datetime(2024, 12, 1, 0, 0, 0)  # Winter season
@@ -411,10 +436,11 @@ def test_rain_snow_calculation():
         temp_ts.add_data(current_date, "TestLocation", {"temperature_c": temperature})
         precip_ts.add_data(current_date, "TestLocation", {"precipitation": precipitation})
     
-    # Test with different parameter sets
+    # Test with different parameter sets and timesteps
     test_scenarios = [
         {
-            "name": "Cold Climate Forest",
+            "name": "Cold Climate Forest (Daily)",
+            "timestep_seconds": 86400,  # Daily
             "subcatchment": {
                 "precipitationAdjustments": {
                     "snowOffset": -1.0,  # Snow below -1°C
@@ -433,35 +459,39 @@ def test_rain_snow_calculation():
             }
         },
         {
-            "name": "Temperate Agriculture",
+            "name": "Cold Climate Forest (Hourly)",
+            "timestep_seconds": 3600,  # Hourly
             "subcatchment": {
                 "precipitationAdjustments": {
-                    "snowOffset": 0.0,  # Snow at/below 0°C
-                    "rainfallMultiplier": 1.0,
-                    "snowfallMultiplier": 1.0
+                    "snowOffset": -1.0,  # Snow below -1°C
+                    "rainfallMultiplier": 1.2,
+                    "snowfallMultiplier": 1.5
                 }
             },
             "landcover": {
-                "rainfallMultiplier": 1.0,
-                "snowfallMultiplier": 1.0,
+                "rainfallMultiplier": 0.8,
+                "snowfallMultiplier": 1.3,
                 "snowpack": {
-                    "depth": 0.0,  # No initial snowpack
-                    "meltTemperature": 0.0,  # Melt above 0°C
-                    "degreeDayMeltRate": 4.0
+                    "depth": 50.0,  # Start with existing snowpack
+                    "meltTemperature": 1.0,  # Melt above 1°C
+                    "degreeDayMeltRate": 2.5
                 }
             }
         }
     ]
     
-    print(f"\n{'Date':>12} {'Temp(°C)':>8} {'Precip':>8} {'Scenario':>20} {'Rain':>8} {'Snow':>8} {'Melt':>8} {'Pack':>8}")
-    print("-" * 100)
+    print(f"\n{'Date':>12} {'Temp(°C)':>8} {'Precip':>8} {'Scenario':>25} {'Timestep':>8} {'Rain':>8} {'Snow':>8} {'Melt':>8} {'Pack':>8}")
+    print("-" * 120)
     
     for scenario in test_scenarios:
         rain_snow_ts = calculate_rain_and_snow_with_params(
             temp_ts, precip_ts, 
             scenario["subcatchment"], 
-            scenario["landcover"]
+            scenario["landcover"],
+            timestep_seconds=scenario["timestep_seconds"]
         )
+        
+        timestep_label = f"{scenario['timestep_seconds']}s"
         
         for i, row in enumerate(rain_snow_ts.data):
             timestamp = row[0]
@@ -476,7 +506,7 @@ def test_rain_snow_calculation():
             melt = row[6]     # snowmelt_depth
             
             print(f"{timestamp.strftime('%Y-%m-%d'):>12} {temp_value:>8.1f} {precip_value:>8.1f} "
-                  f"{scenario['name']:>20} {rain:>8.2f} {snowfall:>8.2f} {melt:>8.2f} {snowpack:>8.1f}")
+                  f"{scenario['name']:>25} {timestep_label:>8} {rain:>8.2f} {snowfall:>8.2f} {melt:>8.2f} {snowpack:>8.1f}")
         
         print()  # Blank line between scenarios
     
@@ -486,10 +516,13 @@ def test_rain_snow_calculation():
         rain_snow_ts = calculate_rain_and_snow_with_params(
             temp_ts, precip_ts,
             example_scenario["subcatchment"],
-            example_scenario["landcover"]
+            example_scenario["landcover"],
+            timestep_seconds=example_scenario["timestep_seconds"]
         )
         csv_file, json_file = rain_snow_ts.save_to_files("test_rain_snow_calculation")
         print(f"Saved example calculation to: {csv_file}")
+        print(f"\nNote: Hourly timestep shows reduced snowmelt compared to daily timestep")
+        print(f"This is because snowmelt is scaled by timestep_seconds/86400 = {3600/86400:.4f} for hourly data")
     
     return rain_snow_ts
 
@@ -500,6 +533,7 @@ def main():
         print("Usage: python calculate_rain_and_snow.py <temp_csv> <temp_json> <precip_csv> <precip_json> <catchment_json> [output_dir]")
         print("\nExample:")
         print("python calculate_rain_and_snow.py temp_data.csv temp_data.json precip_data.csv precip_data.json generated_catchment.json output/")
+        print("\nNote: The temp_json file will be used to extract timestep_seconds for snowmelt scaling")
         return
     
     # Setup GUI for icon
@@ -538,9 +572,9 @@ def main():
         print("Error: Could not load catchment parameters")
         return
     
-    # Process all land cover types
+    # Process all land cover types with timestep information
     print("Processing all land cover types...")
-    output_files = process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir)
+    output_files = process_all_landcover_types(temp_ts, precip_ts, catchment_data, output_dir, temp_json)
     
     print(f"\nCompleted! Generated {len(output_files)} files:")
     for file_path in output_files:
