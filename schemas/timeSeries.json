@@ -14,6 +14,7 @@
     },
     "landCoverType": {
         "potentialEvapotranspiration":  { "$ref": "#/defs/timeSeries"},
+        "rainAndSnow":                  { "$ref": "#/defs/timeSeries"},
         "waterOutputs":                 { "$ref": "#/defs/timeSeries"}
     },
     "reach": {

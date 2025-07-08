@@ -41,6 +41,7 @@ class ModelTimeSeriesEditor:
             'potentialEvapotranspiration': 'Potential Evapotranspiration',
             'actualEvapotranspiration': 'Actual Evapotranspiration',
             'temperatureAndPrecipitation': 'Temperature and Precipitation',
+            'rainAndSnow': 'Rain and Snow',
             'solarRadiation': 'Solar Radiation',
             'runoffToReach': 'Runoff to Reach',
             'waterInputs': 'Water Inputs',

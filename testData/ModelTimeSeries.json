@@ -18,7 +18,7 @@
             },
             "temperatureAndPrecipitation": {
               "fileName": "PERSiST_Top",
-              "mandatory": false,
+              "mandatory": true,
               "generated": true
             },
             "runoffToReach": {
@@ -33,6 +33,11 @@
                 "timeSeries": {
                   "potentialEvapotranspiration": {
                     "fileName": "Upper_Forest_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "rainAndSnow": {
+                    "fileName": "Upper_Forest_rainAndSnow",
                     "mandatory": false,
                     "generated": true
                   },
@@ -144,6 +149,11 @@
                 "timeSeries": {
                   "potentialEvapotranspiration": {
                     "fileName": "Upper_Agriculture_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "rainAndSnow": {
+                    "fileName": "Upper_Agriculture_rainAndSnow",
                     "mandatory": false,
                     "generated": true
                   },
@@ -282,7 +292,7 @@
             },
             "temperatureAndPrecipitation": {
               "fileName": "PERSiST_Middle",
-              "mandatory": false,
+              "mandatory": true,
               "generated": true
             },
             "runoffToReach": {
@@ -297,6 +307,11 @@
                 "timeSeries": {
                   "potentialEvapotranspiration": {
                     "fileName": "Middle_Forest_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "rainAndSnow": {
+                    "fileName": "Middle_Forest_rainAndSnow",
                     "mandatory": false,
                     "generated": true
                   },
@@ -408,6 +423,11 @@
                 "timeSeries": {
                   "potentialEvapotranspiration": {
                     "fileName": "Middle_Agriculture_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "rainAndSnow": {
+                    "fileName": "Middle_Agriculture_rainAndSnow",
                     "mandatory": false,
                     "generated": true
                   },
@@ -546,7 +566,7 @@
             },
             "temperatureAndPrecipitation": {
               "fileName": "PERSiST_Lower",
-              "mandatory": false,
+              "mandatory": true,
               "generated": true
             },
             "runoffToReach": {
@@ -561,6 +581,11 @@
                 "timeSeries": {
                   "potentialEvapotranspiration": {
                     "fileName": "Lower_Forest_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "rainAndSnow": {
+                    "fileName": "Lower_Forest_rainAndSnow",
                     "mandatory": false,
                     "generated": true
                   },
@@ -672,6 +697,11 @@
                 "timeSeries": {
                   "potentialEvapotranspiration": {
                     "fileName": "Lower_Agriculture_potentialEvapotranspiration",
+                    "mandatory": false,
+                    "generated": true
+                  },
+                  "rainAndSnow": {
+                    "fileName": "Lower_Agriculture_rainAndSnow",
                     "mandatory": false,
                     "generated": true
                   },
