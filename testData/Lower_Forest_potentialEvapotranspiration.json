@@ -1,0 +1,12 @@
+{
+    "uuid": "27a098d6-8551-4230-bda8-ae98ccbea48b",
+    "hru_name": "Lower",
+    "landcover_name": "Forest",
+    "calculation_method": "Built-in Jensen-Haise with landcover parameters",
+    "solar_radiation_scaling_factor": "60.0",
+    "growing_degree_offset": "0.0",
+    "generation_time": "2025-07-08 07:36:10",
+    "formula": "PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset)",
+    "temperature_constraint": "PET = 0 when (T + growingDegreeOffset) <= 0",
+    "num_records": "1461"
+}

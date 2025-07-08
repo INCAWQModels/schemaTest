@@ -1,9 +1,9 @@
 {
-    "uuid": "18f097b3-0f05-4be3-975b-e557cb2561ef",
+    "uuid": "d40120be-1dd7-4c8e-8729-ff726a969480",
     "latitude": "45.0",
     "longitude": "15.0",
     "source": "Python solar radiation model (standalone)",
-    "generation_time": "2025-07-07 16:23:25",
+    "generation_time": "2025-07-08 07:36:10",
     "location_id": "Upper",
     "timezone_offset": "1.0",
     "start_time": "2010-01-01T12:00:00",

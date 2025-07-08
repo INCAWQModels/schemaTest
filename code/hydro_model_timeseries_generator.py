@@ -131,9 +131,10 @@ class HydrologicalTimeSeriesGenerator:
     """Main class for generating hydrological model time series."""
     
     def __init__(self, catchment_file="../testData/generated_catchment.json", 
-                 timeseries_file="../testData/modelTimeSeries.json"):
+                 timeseries_file="../testData/modelTimeSeries.json", replace_all=True):
         self.catchment_file = catchment_file
         self.timeseries_file = timeseries_file
+        self.replace_all = replace_all
         self.catchment_data = None
         self.timeseries_data = None
         self.validator = TimeSeriesValidator()
@@ -367,13 +368,19 @@ class HydrologicalTimeSeriesGenerator:
                 if not output_filename:
                     output_filename = f"{hru_name}_subcatchment_solarRadiation"
                 
-                # Write output files
+                # Check if files already exist
                 csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
                 json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
                 
+                if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                    print(f"  ✓ Skipping (files exist): {output_filename}")
+                    continue
+                
+                # Write output files
                 solar_ts.save_to_files(output_filename, self.base_folder)
                 
-                print(f"  ✓ Generated: {csv_output_path}")
+                status_msg = "Regenerated" if (os.path.exists(csv_output_path)) else "Generated"
+                print(f"  ✓ {status_msg}: {csv_output_path}")
                 print(f"  ✓ Metadata: {json_output_path}")
                 
             except Exception as e:
@@ -381,6 +388,262 @@ class HydrologicalTimeSeriesGenerator:
                 return False
         
         print("\n✓ Solar radiation generation completed successfully")
+        return True
+    
+    def generate_potential_evapotranspiration_timeseries(self):
+        """Generate potential evapotranspiration time series for all HRU/landCoverType combinations."""
+        print("\nGenerating potential evapotranspiration time series...")
+        
+        if not hasattr(self, 'hru_timeseries_info'):
+            print("Error: Must validate temperature/precipitation files first")
+            return False
+        
+        try:
+            # Try to import the enhanced PET calculator
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from enhanced_pet_calculator import calculate_pet_with_landcover_params, load_timeseries_from_files
+            print("Using enhanced PET calculator with landcover parameters")
+        except ImportError:
+            print("Warning: Could not import enhanced PET calculator")
+            return self.generate_pet_builtin()
+        
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            print(f"\nProcessing PET for HRU: {hru_name}")
+            
+            # Load solar radiation time series for this HRU
+            solar_filename = None
+            for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                if ts_hru['name'] == hru_name:
+                    try:
+                        solar_info = ts_hru['timeSeries']['subcatchment']['solarRadiation']
+                        solar_filename = solar_info['fileName']
+                        break
+                    except KeyError:
+                        print(f"Warning: No solar radiation configuration for {hru_name}")
+            
+            if not solar_filename:
+                print(f"Error: No solar radiation file found for {hru_name}")
+                continue
+            
+            # Load solar radiation data
+            solar_csv_path = os.path.join(self.base_folder, f"{solar_filename}.csv")
+            solar_json_path = os.path.join(self.base_folder, f"{solar_filename}.json")
+            
+            if not os.path.exists(solar_csv_path):
+                print(f"Error: Solar radiation file not found: {solar_csv_path}")
+                continue
+            
+            solar_ts = load_timeseries_from_files(solar_csv_path, solar_json_path)
+            if not solar_ts:
+                print(f"Error: Could not load solar radiation data for {hru_name}")
+                continue
+            
+            # Load temperature/precipitation data
+            temp_csv_path = hru_info['csv_path']
+            temp_json_path = hru_info['json_path']
+            
+            temp_ts = load_timeseries_from_files(temp_csv_path, temp_json_path)
+            if not temp_ts:
+                print(f"Error: Could not load temperature data for {hru_name}")
+                continue
+            
+            # Get landCoverTypes for this HRU from catchment data
+            hru_catchment_data = None
+            for catchment_hru in self.catchment_data['HRUs']:
+                if catchment_hru['name'] == hru_name:
+                    hru_catchment_data = catchment_hru
+                    break
+            
+            if not hru_catchment_data:
+                print(f"Error: No catchment data found for {hru_name}")
+                continue
+            
+            landcover_types = hru_catchment_data.get('subcatchment', {}).get('landCoverTypes', [])
+            if not landcover_types:
+                print(f"Warning: No land cover types found for {hru_name}")
+                continue
+            
+            print(f"  Found {len(landcover_types)} land cover types")
+            
+            # Calculate PET for each landCoverType
+            for lc_data in landcover_types:
+                lc_name = lc_data.get('name', 'Unknown')
+                lc_abbrev = lc_data.get('abbreviation', 'UK')
+                
+                print(f"    Calculating PET for {lc_name} ({lc_abbrev})")
+                
+                # Get evaporation parameters
+                evap_params = lc_data.get('evaporation', {})
+                solar_scaling = evap_params.get('solarRadiationScalingFactor', 60.0)
+                degree_offset = evap_params.get('growingDegreeOffset', 0.0)
+                
+                print(f"      Parameters: solarRadiationScalingFactor={solar_scaling}, growingDegreeOffset={degree_offset}")
+                
+                # Calculate PET
+                try:
+                    pet_ts = calculate_pet_with_landcover_params(
+                        solar_ts, temp_ts, evap_params,
+                        solar_column="solar_radiation",
+                        temp_column="temperature_c"
+                    )
+                    
+                    # Find output filename from time series configuration
+                    output_filename = None
+                    for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                        if ts_hru['name'] == hru_name:
+                            try:
+                                landcover_types_ts = ts_hru['timeSeries']['subcatchment']['landCoverTypes']
+                                for lc_ts in landcover_types_ts:
+                                    if lc_ts['name'] == lc_name:
+                                        pet_info = lc_ts['timeSeries']['potentialEvapotranspiration']
+                                        output_filename = pet_info['fileName']
+                                        break
+                                if output_filename:
+                                    break
+                            except KeyError:
+                                pass
+                    
+                    if not output_filename:
+                        output_filename = f"{hru_name}_{lc_name}_potentialEvapotranspiration"
+                    
+                    # Check if files already exist
+                    csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                    json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                    
+                    if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                        print(f"      ✓ Skipping (files exist): {output_filename}")
+                        continue
+                    
+                    # Add landcover-specific metadata
+                    pet_ts.add_metadata("hru_name", hru_name)
+                    pet_ts.add_metadata("landcover_name", lc_name)
+                    pet_ts.add_metadata("landcover_abbreviation", lc_abbrev)
+                    
+                    # Save PET time series
+                    pet_ts.save_to_files(output_filename, self.base_folder)
+                    
+                    status_msg = "Regenerated" if (os.path.exists(csv_output_path)) else "Generated"
+                    print(f"      ✓ {status_msg}: {csv_output_path}")
+                    print(f"      ✓ Metadata: {json_output_path}")
+                    
+                    # Show sample PET values
+                    if len(pet_ts.data) > 0:
+                        sample_pet = pet_ts.data[0][2] if len(pet_ts.data[0]) > 2 else None
+                        if sample_pet is not None:
+                            print(f"      Sample PET value: {sample_pet:.3f} mm/day")
+                
+                except Exception as e:
+                    print(f"      Error calculating PET for {hru_name}/{lc_name}: {e}")
+                    continue
+        
+        print("\n✓ Potential evapotranspiration generation completed successfully")
+        return True
+    
+    def generate_pet_builtin(self):
+        """Generate PET using built-in calculation (fallback method)."""
+        print("Using built-in PET calculation...")
+        
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            print(f"\nProcessing PET for HRU: {hru_name} (built-in method)")
+            
+            # Get landCoverTypes from catchment data
+            hru_catchment_data = None
+            for catchment_hru in self.catchment_data['HRUs']:
+                if catchment_hru['name'] == hru_name:
+                    hru_catchment_data = catchment_hru
+                    break
+            
+            if not hru_catchment_data:
+                continue
+            
+            landcover_types = hru_catchment_data.get('subcatchment', {}).get('landCoverTypes', [])
+            
+            # Simple PET calculation for each landCoverType
+            for lc_data in landcover_types:
+                lc_name = lc_data.get('name', 'Unknown')
+                
+                try:
+                    # Get parameters
+                    evap_params = lc_data.get('evaporation', {})
+                    solar_scaling = evap_params.get('solarRadiationScalingFactor', 60.0)
+                    degree_offset = evap_params.get('growingDegreeOffset', 0.0)
+                    
+                    # Load temperature data
+                    temp_data = []
+                    temp_csv_path = hru_info['csv_path']
+                    
+                    with open(temp_csv_path, 'r', encoding='utf-8') as f:
+                        reader = csv.reader(f)
+                        header = next(reader)
+                        temp_col_idx = header.index('temperature_c') if 'temperature_c' in header else 3
+                        
+                        for row in reader:
+                            if len(row) > temp_col_idx:
+                                try:
+                                    timestamp = datetime.datetime.fromisoformat(row[0])
+                                    temperature = float(row[temp_col_idx])
+                                    
+                                    # Calculate adjusted temperature
+                                    adjusted_temp = temperature + degree_offset
+                                    
+                                    # Simple PET calculation: assume 200 W/m² average solar radiation
+                                    rs = 200.0 * 0.0864  # Convert to MJ/m²/day
+                                    
+                                    # Apply temperature constraint: PET = 0 when adjusted_temp <= 0
+                                    if adjusted_temp <= 0.0:
+                                        pet = 0.0
+                                    else:
+                                        pet = rs * (1.0 / solar_scaling) * adjusted_temp
+                                    
+                                    pet = max(0.0, pet)  # Ensure non-negative
+                                    temp_data.append([timestamp.isoformat(), hru_name, pet])
+                                except (ValueError, IndexError):
+                                    continue
+                    
+                    # Find output filename
+                    output_filename = f"{hru_name}_{lc_name}_potentialEvapotranspiration"
+                    
+                    # Check if files already exist
+                    csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                    json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                    
+                    if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                        print(f"      ✓ Skipping (files exist): {output_filename}")
+                        continue
+                    
+                    # Write CSV
+                    with open(csv_output_path, 'w', newline='', encoding='utf-8') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow(['timestamp', 'location', 'pet_mm_day'])
+                        writer.writerows(temp_data)
+                    
+                    # Write JSON metadata
+                    metadata = {
+                        'uuid': str(uuid.uuid4()),
+                        'hru_name': hru_name,
+                        'landcover_name': lc_name,
+                        'calculation_method': 'Built-in Jensen-Haise with landcover parameters',
+                        'solar_radiation_scaling_factor': str(solar_scaling),
+                        'growing_degree_offset': str(degree_offset),
+                        'generation_time': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        'formula': 'PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset)',
+                        'temperature_constraint': 'PET = 0 when (T + growingDegreeOffset) <= 0',
+                        'num_records': str(len(temp_data))
+                    }
+                    
+                    with open(json_output_path, 'w', encoding='utf-8') as jsonfile:
+                        json.dump(metadata, jsonfile, indent=4)
+                    
+                    status_msg = "Regenerated" if os.path.exists(csv_output_path) else "Generated"
+                    print(f"      ✓ {status_msg}: {csv_output_path}")
+                    
+                except Exception as e:
+                    print(f"      Error: {e}")
+                    continue
+        
+        print("\n✓ Built-in PET generation completed")
         return True
     
     def generate_solar_radiation_builtin(self):
@@ -465,8 +728,15 @@ class HydrologicalTimeSeriesGenerator:
                 if not output_filename:
                     output_filename = f"{hru_name}_subcatchment_solarRadiation"
                 
-                # Write CSV file
+                # Check if files already exist
                 csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                
+                if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                    print(f"  ✓ Skipping (files exist): {output_filename}")
+                    continue
+                
+                # Write CSV file
                 with open(csv_output_path, 'w', newline='', encoding='utf-8') as csvfile:
                     writer = csv.writer(csvfile)
                     # Use a simple header
@@ -474,7 +744,6 @@ class HydrologicalTimeSeriesGenerator:
                     writer.writerows(solar_data)
                 
                 # Write JSON metadata
-                json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
                 metadata = {
                     'uuid': str(uuid.uuid4()),
                     'latitude': str(latitude),
@@ -491,7 +760,8 @@ class HydrologicalTimeSeriesGenerator:
                 with open(json_output_path, 'w', encoding='utf-8') as jsonfile:
                     json.dump(metadata, jsonfile, indent=4)
                 
-                print(f"  ✓ Generated: {csv_output_path}")
+                status_msg = "Regenerated" if os.path.exists(csv_output_path) else "Generated"
+                print(f"  ✓ {status_msg}: {csv_output_path}")
                 print(f"  ✓ Metadata: {json_output_path}")
                 
             except Exception as e:
@@ -505,6 +775,8 @@ class HydrologicalTimeSeriesGenerator:
         """Run the complete time series generation process."""
         print("=" * 60)
         print("HYDROLOGICAL MODEL TIME SERIES GENERATOR")
+        print("=" * 60)
+        print(f"Replace existing files: {'Yes' if self.replace_all else 'No (--no-replace)'}")
         print("=" * 60)
         
         # Step 1: Load input files
@@ -522,9 +794,22 @@ class HydrologicalTimeSeriesGenerator:
             print("\nGeneration failed: Solar radiation generation failed")
             return False
         
+        # Step 4: Generate potential evapotranspiration time series
+        if not self.generate_potential_evapotranspiration_timeseries():
+            print("\nGeneration failed: Potential evapotranspiration generation failed")
+            return False
+        
         print("\n" + "=" * 60)
         print("TIME SERIES GENERATION COMPLETED SUCCESSFULLY")
         print("=" * 60)
+        print("Generated time series:")
+        print("✓ Solar radiation for each HRU")
+        print("✓ Potential evapotranspiration for each HRU/landCoverType combination")
+        print("\nNext steps (not yet implemented):")
+        print("- Snow and rain dynamics for each landcover type")
+        print("- Soil temperature series for each bucket")
+        print("- Precipitation routing between buckets")
+        print("- Flow calculations to and within reaches")
         
         return True
     
@@ -560,6 +845,7 @@ class HydrologicalTimeSeriesGenerator:
             self.root.withdraw()
             return False
         
+        self.replace_all = replace_all
         self.catchment_file = catchment_file
         self.timeseries_file = timeseries_file
         
@@ -570,9 +856,12 @@ class HydrologicalTimeSeriesGenerator:
 def main():
     """Main function with command line argument handling."""
     
-    # Default file paths
+    # Default file paths (with correct path prefix)
     default_catchment = "../testData/generated_catchment.json"
     default_timeseries = "../testData/modelTimeSeries.json"
+    
+    # Parse command line arguments
+    replace_all = True  # Default behavior: overwrite existing files
     
     # Check command line arguments
     if len(sys.argv) == 1:
@@ -581,30 +870,64 @@ def main():
         timeseries_file = default_timeseries
         
     elif len(sys.argv) == 2:
-        # One argument - assume it's the catchment file
-        catchment_file = sys.argv[1]
-        timeseries_file = default_timeseries
+        arg1 = sys.argv[1]
+        if arg1 == "--gui":
+            # GUI mode requested
+            generator = HydrologicalTimeSeriesGenerator(replace_all=replace_all)
+            if generator.interactive_file_selection():
+                generator.run_generation()
+            else:
+                print("File selection cancelled")
+            return
+        elif arg1 == "--no-replace":
+            # Don't replace existing files
+            replace_all = False
+            catchment_file = default_catchment
+            timeseries_file = default_timeseries
+        else:
+            # One argument - assume it's the catchment file
+            catchment_file = sys.argv[1]
+            timeseries_file = default_timeseries
         
     elif len(sys.argv) == 3:
-        # Two arguments - catchment and timeseries files
-        catchment_file = sys.argv[1]
-        timeseries_file = sys.argv[2]
-        
-    elif len(sys.argv) == 4 and sys.argv[1] == "--gui":
-        # GUI mode requested
-        generator = HydrologicalTimeSeriesGenerator()
-        if generator.interactive_file_selection():
-            generator.run_generation()
+        arg1, arg2 = sys.argv[1], sys.argv[2]
+        if arg1 == "--no-replace":
+            # Don't replace existing files, with custom catchment file
+            replace_all = False
+            catchment_file = arg2
+            timeseries_file = default_timeseries
         else:
-            print("File selection cancelled")
-        return
+            # Two arguments - catchment and timeseries files
+            catchment_file = arg1
+            timeseries_file = arg2
+            
+    elif len(sys.argv) == 4:
+        arg1, arg2, arg3 = sys.argv[1], sys.argv[2], sys.argv[3]
+        if arg1 == "--no-replace":
+            # Don't replace existing files, with custom files
+            replace_all = False
+            catchment_file = arg2
+            timeseries_file = arg3
+        elif arg1 == "--gui":
+            print("Error: --gui cannot be combined with file arguments")
+            return
+        else:
+            print("Error: Too many arguments")
+            return
         
     else:
         print("Usage:")
         print("  python hydro_timeseries_generator.py")
+        print("  python hydro_timeseries_generator.py --no-replace")
         print("  python hydro_timeseries_generator.py <catchment_file>")
+        print("  python hydro_timeseries_generator.py --no-replace <catchment_file>")
         print("  python hydro_timeseries_generator.py <catchment_file> <timeseries_file>")
+        print("  python hydro_timeseries_generator.py --no-replace <catchment_file> <timeseries_file>")
         print("  python hydro_timeseries_generator.py --gui")
+        print("")
+        print("Options:")
+        print("  --no-replace    Skip files that already exist (default: overwrite)")
+        print("  --gui          Interactive file selection mode")
         print("")
         print("Default files:")
         print(f"  Catchment: {default_catchment}")
@@ -621,7 +944,8 @@ def main():
         return
     
     # Create generator and run
-    generator = HydrologicalTimeSeriesGenerator(catchment_file, timeseries_file)
+    print(f"Replace existing files: {'Yes' if replace_all else 'No'}")
+    generator = HydrologicalTimeSeriesGenerator(catchment_file, timeseries_file, replace_all)
     generator.run_generation()
 
 
