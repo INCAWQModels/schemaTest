@@ -7,7 +7,10 @@ Uses the Jensen-Haise method with parameters from the evaporation section of eac
 - solarRadiationScalingFactor (replaces ct coefficient)
 - growingDegreeOffset (replaces jh_offset)
 
-Formula: PET = Rs * (1/solarRadiationScalingFactor) * (T + growingDegreeOffset)
+Formula: PET = Rs * (1/solarRadiationScalingFactor) * (T + growingDegreeOffset) * (timestep_seconds/86400)
+
+The timestep scaling factor is obtained from the JSON metadata associated with the temperature
+and precipitation time series to ensure proper units for different timesteps.
 """
 
 import os
@@ -17,6 +20,7 @@ import csv
 import datetime
 import math
 import uuid
+import tkinter as tk
 
 # Try to import project modules
 try:
@@ -102,9 +106,28 @@ class SimplifiedTimeSeries:
         return csv_filename, json_filename
 
 
+def set_window_icon(root):
+    """Set the tkinter window icon to INCAMan.png if available."""
+    try:
+        icon_paths = [
+            "INCAMan.png",
+            os.path.join(os.path.dirname(__file__), "INCAMan.png"),
+            os.path.join(os.path.dirname(__file__), "..", "INCAMan.png"),
+            os.path.join(os.path.dirname(__file__), "..", "..", "INCAMan.png")
+        ]
+        
+        for icon_path in icon_paths:
+            if os.path.exists(icon_path):
+                icon = tk.PhotoImage(file=icon_path)
+                root.iconphoto(False, icon)
+                break
+    except Exception:
+        # If icon loading fails, continue without icon
+        pass
+
+
 def load_timeseries_from_files(csv_path, json_path):
     """Load a time series from CSV and JSON files."""
-    
     # Use TimeSeries class if available, otherwise use simplified version
     TSClass = TimeSeries if TimeSeries is not None else SimplifiedTimeSeries
     
@@ -167,82 +190,125 @@ def load_timeseries_from_files(csv_path, json_path):
     return ts
 
 
-def calculate_pet_with_landcover_params(solar_ts, temp_ts, landcover_params, 
-                                       solar_column="solar_radiation", 
-                                       temp_column="temperature_c"):
+def get_timestep_seconds_from_timeseries(temp_ts, solar_ts):
     """
-    Calculate PET using Jensen-Haise method with landCoverType-specific parameters.
+    Extract timestep_seconds from time series metadata to calculate the timestep scaling factor.
     
     Parameters:
-    solar_ts: TimeSeries object with solar radiation data (W/m²)
-    temp_ts: TimeSeries object with temperature data (°C)
-    landcover_params: Dict with 'solarRadiationScalingFactor' and 'growingDegreeOffset'
-    solar_column: Name of solar radiation column
-    temp_column: Name of temperature column
+    temp_ts: Temperature time series object
+    solar_ts: Solar radiation time series object
     
     Returns:
-    TimeSeries object with PET values (mm/day)
+    float: Timestep scaling factor (timestep_seconds / 86400)
     """
+    timestep_seconds = None
     
-    # Extract landcover parameters
-    solar_scaling = landcover_params.get('solarRadiationScalingFactor', 60.0)
-    degree_offset = landcover_params.get('growingDegreeOffset', 0.0)
+    # Try to get timestep_seconds from temperature time series metadata
+    if hasattr(temp_ts, 'metadata') and 'timestep_seconds' in temp_ts.metadata:
+        timestep_seconds = temp_ts.metadata['timestep_seconds']
+    # Try solar radiation time series metadata
+    elif hasattr(solar_ts, 'metadata') and 'timestep_seconds' in solar_ts.metadata:
+        timestep_seconds = solar_ts.metadata['timestep_seconds']
     
-    # Use TimeSeries class if available, otherwise use simplified version
+    # If found, calculate scaling factor
+    if timestep_seconds is not None:
+        try:
+            timestep_seconds = float(timestep_seconds)
+            scaling_factor = timestep_seconds / 86400.0  # 86400 seconds in a day
+            print(f"Found timestep_seconds: {timestep_seconds}, scaling factor: {scaling_factor:.6f}")
+            return scaling_factor
+        except (ValueError, ZeroDivisionError):
+            print(f"Warning: Invalid timestep_seconds value: {timestep_seconds}")
+    
+    # Default to 1.0 (daily timestep) if not found
+    print("Warning: timestep_seconds not found in metadata, assuming daily timestep (scaling factor = 1.0)")
+    return 1.0
+
+
+def calculate_pet_with_landcover_params(solar_ts, temp_ts, landcover_params,
+                                      solar_column="solar_radiation", temp_column="temperature_c"):
+    """
+    Calculate potential evapotranspiration using landcover-specific parameters
+    and timestep scaling from JSON metadata.
+    
+    This function implements the enhanced Jensen-Haise equation:
+    PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset) * (timestep_seconds/86400)
+    
+    Where the timestep scaling factor is extracted from the time series metadata.
+    
+    Parameters:
+    solar_ts: TimeSeries object containing solar radiation data
+    temp_ts: TimeSeries object containing temperature data  
+    landcover_params: Dictionary containing landcover-specific parameters
+    solar_column: Name of solar radiation column in solar_ts
+    temp_column: Name of temperature column in temp_ts
+    
+    Returns:
+    TimeSeries object with PET values scaled for the appropriate timestep
+    """
+    # Extract parameters with defaults
+    solar_scaling = landcover_params.get('solarRadiationScalingFactor', 60.0)  # Default from Jensen-Haise
+    degree_offset = landcover_params.get('growingDegreeOffset', 0.0)          # Default offset
+    
+    # Get timestep scaling factor from metadata
+    timestep_scaling = get_timestep_seconds_from_timeseries(temp_ts, solar_ts)
+    
+    print(f"PET calculation parameters:")
+    print(f"  - Solar radiation scaling factor: {solar_scaling}")
+    print(f"  - Growing degree offset: {degree_offset}")
+    print(f"  - Timestep scaling factor: {timestep_scaling:.6f}")
+    
+    # Create output time series
     TSClass = TimeSeries if TimeSeries is not None else SimplifiedTimeSeries
+    output_ts = TSClass(f"PET_{landcover_params.get('name', 'Unknown')}")
+    output_ts.add_column("pet_mm_timestep")  # Updated column name to reflect units
     
-    # Create output TimeSeries
-    output_ts = TSClass()
-    
-    # Copy metadata from solar time series
-    for key, value in solar_ts.metadata.items():
-        output_ts.add_metadata(key, value)
+    # Copy relevant metadata from source time series
+    if hasattr(solar_ts, 'metadata'):
+        for key, value in solar_ts.metadata.items():
+            output_ts.add_metadata(key, value)
     
     # Add PET-specific metadata
-    output_ts.add_metadata("calculation_method", "Jensen-Haise with landcover parameters")
-    output_ts.add_metadata("solar_radiation_scaling_factor", str(solar_scaling))
-    output_ts.add_metadata("growing_degree_offset", str(degree_offset))
-    output_ts.add_metadata("generation_time", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    output_ts.add_metadata("formula", "PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset)")
-    output_ts.add_metadata("temperature_constraint", "PET = 0 when (T + growingDegreeOffset) <= 0")
-    
-    # Add PET column
-    output_ts.add_column("pet_mm_day")
+    output_ts.add_metadata("calculation_method", "Enhanced Jensen-Haise with timestep scaling")
+    output_ts.add_metadata("solar_scaling_factor", solar_scaling)
+    output_ts.add_metadata("growing_degree_offset", degree_offset)
+    output_ts.add_metadata("timestep_scaling_factor", timestep_scaling)
+    output_ts.add_metadata("pet_units", "mm per timestep")
+    output_ts.add_metadata("pet_formula", "Rs * (1/solar_scaling) * max(0, T + offset) * (timestep_s/86400)")
     
     # Find column indices
-    try:
-        if hasattr(solar_ts, 'columns'):
+    solar_idx = None
+    timestamp_idx_solar = 0
+    location_idx_solar = 1
+    
+    if hasattr(solar_ts, 'columns'):
+        try:
             solar_idx = solar_ts.columns.index(solar_column)
-            timestamp_idx_solar = 0  # First column is always timestamp
-            location_idx_solar = 1   # Second column is always location
-        else:
-            solar_idx = 2  # Assume third column for simplified case
-            timestamp_idx_solar = 0
-            location_idx_solar = 1
-    except (ValueError, AttributeError):
-        raise ValueError(f"Solar radiation column '{solar_column}' not found")
+        except ValueError:
+            print(f"Warning: Solar column '{solar_column}' not found. Available columns: {solar_ts.columns}")
+            return output_ts
+    else:
+        solar_idx = 2  # Assume third column
     
-    try:
-        if hasattr(temp_ts, 'columns'):
-            temp_idx = temp_ts.columns.index(temp_column)
-            timestamp_idx_temp = 0
-            location_idx_temp = 1
-        else:
-            temp_idx = 2  # Assume third column for simplified case  
-            timestamp_idx_temp = 0
-            location_idx_temp = 1
-    except (ValueError, AttributeError):
-        raise ValueError(f"Temperature column '{temp_column}' not found")
-    
-    # Create temperature lookup for efficient matching
+    # Build temperature lookup table
     temp_lookup = {}
+    temp_idx = None
+    if hasattr(temp_ts, 'columns'):
+        try:
+            temp_idx = temp_ts.columns.index(temp_column)
+        except ValueError:
+            print(f"Warning: Temperature column '{temp_column}' not found. Available columns: {temp_ts.columns}")
+            return output_ts
+    else:
+        temp_idx = 2  # Assume third column
+    
     for row in temp_ts.data:
-        timestamp = row[timestamp_idx_temp]
-        location = row[location_idx_temp]
-        temperature = row[temp_idx] if len(row) > temp_idx else None
-        
-        key = (timestamp, location)
-        temp_lookup[key] = temperature
+        if len(row) > temp_idx:
+            timestamp = row[0]
+            location = row[1]
+            temperature = row[temp_idx]
+            key = (timestamp, location)
+            temp_lookup[key] = temperature
     
     # Process each solar radiation data point
     for row in solar_ts.data:
@@ -266,9 +332,12 @@ def calculate_pet_with_landcover_params(solar_ts, temp_ts, landcover_params,
             # PET = Rs * (1/solarRadiationScalingFactor) * (T + growingDegreeOffset)
             # BUT: Use 0 when (T + growingDegreeOffset) <= 0
             if adjusted_temp <= 0.0:
-                pet = 0.0
+                pet_daily = 0.0
             else:
-                pet = rs * (1.0 / solar_scaling) * adjusted_temp
+                pet_daily = rs * (1.0 / solar_scaling) * adjusted_temp
+            
+            # Apply timestep scaling to convert from mm/day to mm/timestep
+            pet = pet_daily * timestep_scaling
             
             # Ensure PET is non-negative (additional safety check)
             pet = max(0.0, pet)
@@ -277,15 +346,14 @@ def calculate_pet_with_landcover_params(solar_ts, temp_ts, landcover_params,
             pet = None
         
         # Add to output time series
-        output_ts.add_data(timestamp, location, {"pet_mm_day": pet})
+        output_ts.add_data(timestamp, location, {"pet_mm_timestep": pet})
     
     return output_ts
 
 
 def test_pet_calculation():
-    """Test function to demonstrate PET calculation."""
-    
-    print("Testing PET calculation with landcover parameters...")
+    """Test function to demonstrate PET calculation with timestep scaling."""
+    print("Testing PET calculation with landcover parameters and timestep scaling...")
     
     # Create sample solar radiation data
     start_date = datetime.datetime(2024, 6, 21, 12, 0, 0)  # Summer solstice, noon
@@ -297,10 +365,12 @@ def test_pet_calculation():
     solar_ts.add_column("solar_radiation")
     solar_ts.add_metadata("latitude", "45.0")
     solar_ts.add_metadata("longitude", "15.0")
+    solar_ts.add_metadata("timestep_seconds", 86400)  # Daily timestep
     
     # Temperature time series  
     temp_ts = TSClass("Test_Temperature")
     temp_ts.add_column("temperature_c")
+    temp_ts.add_metadata("timestep_seconds", 86400)  # Daily timestep
     
     # Add sample data for 5 days with varying temperatures (including cold)
     for i in range(5):
@@ -311,57 +381,80 @@ def test_pet_calculation():
         solar_ts.add_data(current_date, "TestLocation", {"solar_radiation": solar_rad})
         temp_ts.add_data(current_date, "TestLocation", {"temperature_c": temperature})
     
-    # Test with different landcover parameters
+    # Test with different landcover parameters and timesteps
     test_params = [
         {"name": "Forest", "solarRadiationScalingFactor": 60.0, "growingDegreeOffset": 0.0},
         {"name": "Agriculture", "solarRadiationScalingFactor": 80.0, "growingDegreeOffset": 2.0},
-        {"name": "Cold_Climate", "solarRadiationScalingFactor": 40.0, "growingDegreeOffset": -3.0}  # Will create some zero PET values
+        {"name": "Cold_Climate", "solarRadiationScalingFactor": 40.0, "growingDegreeOffset": -3.0}
     ]
     
-    print(f"\n{'Date':>12} {'Solar(W/m²)':>12} {'Temp(°C)':>10} {'LandCover':>12} {'Adj.Temp':>10} {'PET(mm/d)':>12}")
-    print("-" * 80)
+    # Test different timesteps
+    test_timesteps = [86400, 3600, 43200]  # Daily, hourly, 12-hourly
+    timestep_names = ["Daily (86400s)", "Hourly (3600s)", "12-Hourly (43200s)"]
     
-    for params in test_params:
-        pet_ts = calculate_pet_with_landcover_params(solar_ts, temp_ts, params)
+    print(f"\n{'Date':>12} {'Solar(W/m²)':>12} {'Temp(°C)':>10} {'LandCover':>12} {'Timestep':>15} {'Scaling':>10} {'PET':>12}")
+    print("-" * 110)
+    
+    for timestep, timestep_name in zip(test_timesteps, timestep_names):
+        # Update timestep in metadata
+        solar_ts.add_metadata("timestep_seconds", timestep)
+        temp_ts.add_metadata("timestep_seconds", timestep)
         
-        for i, row in enumerate(pet_ts.data):
-            timestamp = row[0]
-            pet_value = row[2]  # PET is in third column
-            solar_value = solar_ts.data[i][2]
-            temp_value = temp_ts.data[i][2]
-            adjusted_temp = temp_value + params.get('growingDegreeOffset', 0.0)
+        for params in test_params:
+            pet_ts = calculate_pet_with_landcover_params(solar_ts, temp_ts, params)
             
-            print(f"{timestamp.strftime('%Y-%m-%d'):>12} {solar_value:>12.1f} {temp_value:>10.1f} "
-                  f"{params['name']:>12} {adjusted_temp:>10.1f} {pet_value:>12.3f}")
+            for i, row in enumerate(pet_ts.data):
+                if i >= 3:  # Only show first 3 rows for brevity
+                    break
+                    
+                timestamp = row[0]
+                pet_value = row[2]  # PET is in third column
+                solar_value = solar_ts.data[i][2]
+                temp_value = temp_ts.data[i][2]
+                scaling_factor = timestep / 86400.0
+                
+                print(f"{timestamp.strftime('%Y-%m-%d'):>12} {solar_value:>12.1f} {temp_value:>10.1f} "
+                      f"{params['name']:>12} {timestep_name:>15} {scaling_factor:>10.6f} {pet_value:>12.6f}")
+            
+            print()  # Blank line between landcover types
         
-        print()  # Blank line between landcover types
+        print("-" * 110)  # Separator between timesteps
     
     # Save one example
     if test_params:
         example_params = test_params[0]
         pet_ts = calculate_pet_with_landcover_params(solar_ts, temp_ts, example_params)
-        csv_file, json_file = pet_ts.save_to_files("test_pet_calculation")
+        csv_file, json_file = pet_ts.save_to_files("test_pet_calculation_with_timestep")
         print(f"Saved example PET calculation to: {csv_file}")
     
     return pet_ts
 
 
 if __name__ == "__main__":
+    # Set up window icon for any GUI components
+    root = tk.Tk()
+    root.withdraw()
+    set_window_icon(root)
+    
     # Run test
     test_pet_calculation()
     
-    print("\nKey differences from original calculate_potential_evapotranspiration.py:")
+    print("\nKey features of the enhanced PET calculation:")
     print("1. Uses solarRadiationScalingFactor instead of fixed ct (0.025)")
     print("2. Uses growingDegreeOffset instead of fixed jh_offset (3.0)")
     print("3. Reads parameters from landCoverType evaporation section")
-    print("4. Formula: PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset)")
+    print("4. Formula: PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset) * (timestep_seconds/86400)")
     print("5. Temperature constraint: PET = 0 when (T + growingDegreeOffset) <= 0")
-    print("6. Integrates with catchment structure for landcover-specific calculations")
+    print("6. Timestep scaling: Automatically scales output based on timestep_seconds from JSON metadata")
+    print("7. Integrates with catchment structure for landcover-specific calculations")
     print("\nBiological rationale: Evapotranspiration ceases when growing-degree-adjusted")
-    print("temperature is at or below freezing (0°C).")
+    print("temperature is at or below freezing (0°C). The timestep scaling ensures proper")
+    print("units regardless of whether the input data is daily, hourly, or other intervals.")
     
-    # Demonstrate the temperature constraint
-    print(f"\nTemperature constraint examples:")
-    print(f"- Temperature: 5°C, growingDegreeOffset: -2°C → Adjusted: 3°C → PET calculated normally")
-    print(f"- Temperature: 2°C, growingDegreeOffset: -3°C → Adjusted: -1°C → PET = 0.0 mm/day")
-    print(f"- Temperature: 0°C, growingDegreeOffset: 0°C → Adjusted: 0°C → PET = 0.0 mm/day")
+    # Demonstrate the temperature constraint and timestep scaling
+    print(f"\nTimestep scaling examples:")
+    print(f"- Daily data (86400s): scaling factor = 1.0 → PET in mm/day")
+    print(f"- Hourly data (3600s): scaling factor = 0.04167 → PET in mm/hour")
+    print(f"- 12-hour data (43200s): scaling factor = 0.5 → PET in mm/12hours")
+    
+    root.destroy()
