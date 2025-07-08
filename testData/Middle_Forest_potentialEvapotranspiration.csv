@@ -1,4 +1,4 @@
-timestamp,location,pet_mm_day
+timestamp,location,potentialEvapotranspiration
 2010-01-01T00:00:00,Middle,3.3984000000000005
 2010-01-02T00:00:00,Middle,3.8016
 2010-01-03T00:00:00,Middle,3.5424000000000007

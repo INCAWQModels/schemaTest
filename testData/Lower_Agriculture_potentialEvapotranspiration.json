@@ -1,12 +1,12 @@
 {
-    "uuid": "2e746ce4-945d-457f-ae79-b159134d68d8",
+    "description": "Potential evapotranspiration for Lower - Agriculture",
+    "start_datetime": "2010-01-01T00:00:00",
+    "timestep_seconds": 86400,
+    "num_records": 1461,
     "hru_name": "Lower",
-    "landcover_name": "Agriculture",
-    "calculation_method": "Built-in Jensen-Haise with landcover parameters",
-    "solar_radiation_scaling_factor": "60.0",
-    "growing_degree_offset": "0.0",
-    "generation_time": "2025-07-08 07:36:10",
-    "formula": "PET = Rs * (1/solarRadiationScalingFactor) * max(0, T + growingDegreeOffset)",
-    "temperature_constraint": "PET = 0 when (T + growingDegreeOffset) <= 0",
-    "num_records": "1461"
+    "land_cover_type": "Agriculture",
+    "degree_offset": 0.0,
+    "solar_scaling": 60.0,
+    "units": "mm/day",
+    "calculation_method": "simple temperature-based"
 }
