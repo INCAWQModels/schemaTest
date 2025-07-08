@@ -1,0 +1,1057 @@
+#!/usr/bin/env python3
+"""
+Hydrological Model Time Series Generator
+
+This script generates time series data for hydrological modeling by:
+1. Reading catchment structure and time series location files
+2. Validating temperature/precipitation data for all HRUs
+3. Generating solar radiation time series for each HRU
+4. Generating potential evapotranspiration time series for each HRU/landCoverType
+5. Generating snow hydrology time series for each HRU/landCoverType
+6. Writing results to specified output locations
+
+Uses only Python standard library components plus existing project code.
+All output is written to a log file instead of console.
+"""
+
+import os
+import sys
+import json
+import csv
+import datetime
+import math
+import uuid
+import tkinter as tk
+from tkinter import messagebox, filedialog
+import logging
+
+# Set up logging to file
+def setup_logging():
+    """Set up logging to write all output to a log file."""
+    # Create logs directory if it doesn't exist
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
+    # Create log filename with timestamp
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = os.path.join(log_dir, f"hydro_timeseries_generator_{timestamp}.log")
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_filename, encoding='utf-8'),
+        ]
+    )
+    
+    # Return the logger and log filename for reference
+    logger = logging.getLogger(__name__)
+    logger.info(f"Logging initialized. Log file: {log_filename}")
+    return logger, log_filename
+
+# Initialize logging
+logger, log_file_path = setup_logging()
+
+# Add the project code directories to Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+calculations_dir = os.path.join(project_root, 'code', 'calculations')
+timeseries_dir = os.path.join(project_root, 'code', 'timeSeries')
+
+# Add to sys.path if directories exist
+for path in [calculations_dir, timeseries_dir]:
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.insert(0, path)
+
+try:
+    # Import project modules
+    from calculate_solar_radiation import compute_radiation_timeseries
+    from calculate_snow_hydrology import calculate_snow_hydrology
+    from timeSeries import TimeSeries
+except ImportError as e:
+    logger.warning(f"Could not import project modules: {e}")
+    logger.warning("Some functionality may be limited.")
+
+
+class TimeSeriesValidator:
+    """Class to validate time series data consistency."""
+    
+    def __init__(self):
+        self.validation_results = {}
+    
+    def load_timeseries_metadata(self, csv_file_path, json_file_path):
+        """Load and parse time series metadata from JSON file."""
+        try:
+            with open(json_file_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+            
+            # Extract key information
+            start_datetime = metadata.get('start_datetime')
+            timestep_seconds = metadata.get('timestep_seconds')
+            num_records = metadata.get('num_records')
+            
+            if start_datetime:
+                start_dt = datetime.datetime.fromisoformat(start_datetime.replace('T', ' '))
+            else:
+                start_dt = None
+            
+            return {
+                'start_datetime': start_dt,
+                'timestep_seconds': timestep_seconds,
+                'num_records': num_records,
+                'metadata': metadata
+            }
+        except Exception as e:
+            logger.error(f"Error loading metadata from {json_file_path}: {e}")
+            return None
+    
+    def validate_csv_structure(self, csv_file_path):
+        """Validate CSV file structure and count records."""
+        try:
+            with open(csv_file_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader)
+                row_count = sum(1 for row in reader)
+                
+                return {
+                    'headers': headers,
+                    'row_count': row_count,
+                    'valid': True
+                }
+        except Exception as e:
+            logger.error(f"Error validating CSV {csv_file_path}: {e}")
+            return {
+                'headers': [],
+                'row_count': 0,
+                'valid': False,
+                'error': str(e)
+            }
+    
+    def check_timeseries_consistency(self, timeseries_list):
+        """Check if all time series have consistent parameters."""
+        if not timeseries_list:
+            return False, "No time series provided"
+        
+        # Get reference parameters from first series
+        reference = timeseries_list[0]
+        ref_start = reference['start_datetime']
+        ref_timestep = reference['timestep_seconds']
+        ref_records = reference['num_records']
+        
+        # Check all series against reference
+        for i, ts in enumerate(timeseries_list[1:], 1):
+            if ts['start_datetime'] != ref_start:
+                return False, f"Start datetime mismatch: {ts['hru_name']} has {ts['start_datetime']}, expected {ref_start}"
+            
+            if ts['timestep_seconds'] != ref_timestep:
+                return False, f"Timestep mismatch: {ts['hru_name']} has {ts['timestep_seconds']}s, expected {ref_timestep}s"
+            
+            if ts['num_records'] != ref_records:
+                return False, f"Record count mismatch: {ts['hru_name']} has {ts['num_records']} records, expected {ref_records}"
+        
+        return True, "All time series are consistent"
+
+
+class HydrologicalTimeSeriesGenerator:
+    """Main class for generating hydrological time series data."""
+    
+    def __init__(self, catchment_file=None, timeseries_file=None, replace_all=True):
+        self.catchment_file = catchment_file
+        self.timeseries_file = timeseries_file
+        self.replace_all = replace_all
+        
+        # Data storage
+        self.catchment_data = None
+        self.timeseries_data = None
+        self.base_folder = None
+        self.validator = TimeSeriesValidator()
+        self.hru_timeseries_info = []
+        
+        # Initialize GUI support
+        self.root = None
+        self.setup_gui()
+    
+    def setup_gui(self):
+        """Initialize tkinter for potential GUI operations."""
+        try:
+            self.root = tk.Tk()
+            self.root.withdraw()  # Hide the main window initially
+            
+            # Try to set the window icon using INCAMan.png
+            icon_paths = [
+                "INCAMan.png",
+                os.path.join(os.path.dirname(__file__), "INCAMan.png"),
+                os.path.join(os.path.dirname(__file__), "..", "INCAMan.png"),
+                os.path.join(os.path.dirname(__file__), "..", "..", "INCAMan.png")
+            ]
+            
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    icon = tk.PhotoImage(file=icon_path)
+                    self.root.iconphoto(False, icon)
+                    break
+                
+        except Exception as e:
+            logger.warning(f"GUI setup warning: {e}")
+    
+    def load_json_file(self, file_path):
+        """Load and parse a JSON file."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logger.error(f"File {file_path} not found.")
+            return None
+        except json.JSONDecodeError as e:
+            logger.error(f"Error parsing JSON from {file_path}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error loading {file_path}: {e}")
+            return None
+    
+    def load_input_files(self):
+        """Load the catchment structure and time series configuration files."""
+        logger.info("Loading input files...")
+        
+        # Load catchment structure
+        self.catchment_data = self.load_json_file(self.catchment_file)
+        if not self.catchment_data:
+            logger.error(f"Failed to load catchment file: {self.catchment_file}")
+            return False
+        
+        # Load time series configuration
+        self.timeseries_data = self.load_json_file(self.timeseries_file)
+        if not self.timeseries_data:
+            logger.error(f"Failed to load time series file: {self.timeseries_file}")
+            return False
+        
+        # Extract base folder for time series files
+        try:
+            self.base_folder = self.timeseries_data['catchment']['timeSeries']['folder']
+            logger.info(f"Time series base folder: {self.base_folder}")
+        except KeyError:
+            logger.warning("No base folder specified in time series configuration")
+            self.base_folder = os.path.dirname(self.timeseries_file)
+        
+        return True
+    
+    def validate_temperature_precipitation_files(self):
+        """Validate that all HRUs have valid temperature/precipitation files."""
+        logger.info("Validating temperature and precipitation files...")
+        
+        hru_timeseries_info = []
+        
+        # Get HRU information from catchment data
+        for hru in self.catchment_data.get('HRUs', []):
+            hru_name = hru['name']
+            logger.info(f"  Validating {hru_name}...")
+            
+            # Find corresponding time series configuration
+            hru_ts_config = None
+            for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                if ts_hru['name'] == hru_name:
+                    hru_ts_config = ts_hru
+                    break
+            
+            if not hru_ts_config:
+                logger.error(f"No time series configuration found for HRU: {hru_name}")
+                return False
+            
+            try:
+                # Get temperature/precipitation file paths
+                temp_precip_info = hru_ts_config['timeSeries']['subcatchment']['temperatureAndPrecipitation']
+                base_filename = temp_precip_info['fileName']
+                
+                csv_path = os.path.join(self.base_folder, f"{base_filename}.csv")
+                json_path = os.path.join(self.base_folder, f"{base_filename}.json")
+                
+                # Validate files exist
+                if not os.path.exists(csv_path):
+                    logger.error(f"CSV file not found: {csv_path}")
+                    return False
+                
+                if not os.path.exists(json_path):
+                    logger.error(f"JSON file not found: {json_path}")
+                    return False
+                
+                # Load and validate metadata
+                metadata_info = self.validator.load_timeseries_metadata(csv_path, json_path)
+                if not metadata_info:
+                    logger.error(f"Could not load metadata for {hru_name}")
+                    return False
+                
+                # Validate CSV structure
+                csv_info = self.validator.validate_csv_structure(csv_path)
+                if not csv_info['valid']:
+                    logger.error(f"Invalid CSV structure for {hru_name}: {csv_info.get('error', 'Unknown error')}")
+                    return False
+                
+                # Add to collection for consistency check
+                metadata_info['hru_name'] = hru_name
+                metadata_info['csv_path'] = csv_path
+                metadata_info['json_path'] = json_path
+                metadata_info['coordinates'] = hru.get('coordinates', {})
+                hru_timeseries_info.append(metadata_info)
+                
+                logger.info(f"  ✓ Valid - {metadata_info['num_records']} records, timestep: {metadata_info['timestep_seconds']}s")
+                
+            except KeyError as e:
+                logger.error(f"Missing temperature/precipitation configuration for {hru_name}: {e}")
+                return False
+        
+        # Check consistency across all HRUs
+        logger.info(f"Checking consistency across {len(hru_timeseries_info)} HRUs...")
+        consistent, message = self.validator.check_timeseries_consistency(hru_timeseries_info)
+        
+        if not consistent:
+            logger.error(f"Time series inconsistency detected: {message}")
+            return False
+        
+        logger.info("✓ All temperature/precipitation files are valid and consistent")
+        
+        # Store for later use
+        self.hru_timeseries_info = hru_timeseries_info
+        return True
+    
+    def generate_solar_radiation_timeseries(self):
+        """Generate solar radiation time series for all HRUs."""
+        logger.info("Generating solar radiation time series...")
+        
+        # Try to use project module first
+        try:
+            from calculate_solar_radiation import compute_radiation_timeseries
+            logger.info("Using project solar radiation calculation module...")
+            return self._generate_solar_with_project_module()
+        except ImportError:
+            logger.info("Project module not available, using built-in calculation...")
+            return self._generate_solar_builtin()
+    
+    def _generate_solar_with_project_module(self):
+        """Generate solar radiation using the project module."""
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            logger.info(f"Generating solar radiation for {hru_name}...")
+            
+            # Get coordinates
+            coordinates = hru_info['coordinates']
+            latitude = coordinates.get('decimalLatitude', 45.0)
+            longitude = coordinates.get('decimalLongitude', -15.0)
+            
+            # Handle longitude convention
+            if longitude < 0:
+                longitude = -longitude
+            
+            logger.info(f"  Coordinates: {latitude}°N, {longitude}°E")
+            
+            # Get time series parameters
+            start_dt = hru_info['start_datetime']
+            timestep_seconds = hru_info['timestep_seconds']
+            num_records = hru_info['num_records']
+            
+            # Calculate solar radiation at the midpoint between adjacent time periods
+            # This ensures consistency across all timestep sizes
+            midpoint_offset = timestep_seconds // 2  # Half the timestep
+            adjusted_start = start_dt + datetime.timedelta(seconds=midpoint_offset)
+            
+            logger.info(f"  Calculating at midpoint: {adjusted_start.time()} (+ {midpoint_offset//3600}h {(midpoint_offset%3600)//60}m from period start)")
+            
+            # Calculate end time based on adjusted start
+            end_dt = adjusted_start + datetime.timedelta(seconds=(num_records - 1) * timestep_seconds)
+            
+            # Estimate timezone offset based on longitude (rough approximation)
+            # Each 15 degrees of longitude = 1 hour of time difference
+            timezone_offset = longitude / 15.0
+            
+            logger.info(f"  Time range: {adjusted_start} to {end_dt}")
+            logger.info(f"  Timestep: {timestep_seconds} seconds")
+            logger.info(f"  Estimated timezone offset: {timezone_offset:.1f} hours")
+            
+            # Generate solar radiation time series
+            try:
+                solar_ts = compute_radiation_timeseries(
+                    start_time=adjusted_start,
+                    end_time=end_dt,
+                    step_seconds=timestep_seconds,
+                    latitude=latitude,
+                    longitude=longitude,
+                    timezone_offset=timezone_offset,
+                    location_id=hru_name
+                )
+                
+                # Find output file name from time series configuration
+                output_filename = None
+                for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                    if ts_hru['name'] == hru_name:
+                        try:
+                            solar_info = ts_hru['timeSeries']['subcatchment']['solarRadiation']
+                            output_filename = solar_info['fileName']
+                            break
+                        except KeyError:
+                            logger.warning(f"No solar radiation filename specified for {hru_name}")
+                
+                if not output_filename:
+                    output_filename = f"{hru_name}_solarRadiation"
+                
+                # Check if files already exist
+                csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                
+                if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                    logger.info(f"  ✓ Skipping (files exist): {output_filename}")
+                    continue
+                
+                # Save the time series
+                csv_path, json_path = solar_ts.save_to_files(
+                    name=output_filename,
+                    output_dir=self.base_folder
+                )
+                
+                logger.info(f"  ✓ Generated: {output_filename}")
+                logger.info(f"    CSV: {csv_path}")
+                logger.info(f"    JSON: {json_path}")
+                
+            except Exception as e:
+                logger.error(f"Error generating solar radiation for {hru_name}: {e}")
+                return False
+        
+        return True
+    
+    def _generate_solar_builtin(self):
+        """Generate solar radiation using built-in calculation."""
+        logger.info("Using built-in solar radiation calculation...")
+        
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            logger.info(f"Generating solar radiation for {hru_name}...")
+            
+            # Get coordinates
+            coordinates = hru_info['coordinates']
+            latitude = coordinates.get('decimalLatitude', 45.0)
+            longitude = coordinates.get('decimalLongitude', -15.0)
+            
+            # Handle longitude convention
+            if longitude < 0:
+                longitude = -longitude
+            
+            logger.info(f"  Coordinates: {latitude}°N, {longitude}°E")
+            
+            # Get time series parameters
+            start_dt = hru_info['start_datetime']
+            timestep_seconds = hru_info['timestep_seconds']
+            num_records = hru_info['num_records']
+            
+            # Calculate solar radiation at the midpoint between adjacent time periods
+            midpoint_offset = timestep_seconds // 2
+            adjusted_start = start_dt + datetime.timedelta(seconds=midpoint_offset)
+            
+            timezone_offset = longitude / 15.0
+            
+            logger.info(f"  Using built-in calculation at midpoint: {adjusted_start.time()}")
+            
+            # Create output files using built-in calculation
+            try:
+                # Create a simple TimeSeries-like structure
+                solar_data = []
+                current_time = adjusted_start
+                
+                for i in range(num_records):
+                    # Simple solar radiation calculation (placeholder)
+                    # This is a very basic calculation - in reality you'd want proper solar models
+                    day_of_year = current_time.timetuple().tm_yday
+                    hour_of_day = current_time.hour + current_time.minute / 60.0
+                    
+                    # Simple solar calculation based on time of day and latitude
+                    solar_declination = 23.45 * math.sin(math.radians(360 * (284 + day_of_year) / 365))
+                    hour_angle = 15 * (hour_of_day - 12)
+                    
+                    solar_elevation = math.asin(
+                        math.sin(math.radians(latitude)) * math.sin(math.radians(solar_declination)) +
+                        math.cos(math.radians(latitude)) * math.cos(math.radians(solar_declination)) * 
+                        math.cos(math.radians(hour_angle))
+                    )
+                    
+                    if solar_elevation > 0:
+                        # Very simple solar radiation calculation (W/m²)
+                        solar_radiation = 1000 * math.sin(solar_elevation)
+                    else:
+                        solar_radiation = 0.0
+                    
+                    solar_data.append([current_time.isoformat(), hru_name, solar_radiation])
+                    current_time += datetime.timedelta(seconds=timestep_seconds)
+                
+                # Find output filename
+                output_filename = None
+                for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                    if ts_hru['name'] == hru_name:
+                        try:
+                            solar_info = ts_hru['timeSeries']['subcatchment']['solarRadiation']
+                            output_filename = solar_info['fileName']
+                            break
+                        except KeyError:
+                            pass
+                
+                if not output_filename:
+                    output_filename = f"{hru_name}_subcatchment_solarRadiation"
+                
+                # Check if files already exist
+                csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                
+                if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                    logger.info(f"  ✓ Skipping (files exist): {output_filename}")
+                    continue
+                
+                # Save CSV file
+                with open(csv_output_path, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(['timestamp', 'location', 'solar_radiation'])
+                    writer.writerows(solar_data)
+                
+                # Save JSON metadata
+                metadata = {
+                    'name': output_filename,
+                    'source': 'built-in solar calculation',
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'start_datetime': start_dt.isoformat(),
+                    'timestep_seconds': timestep_seconds,
+                    'num_records': num_records,
+                    'creation_datetime': datetime.datetime.now().isoformat()
+                }
+                
+                with open(json_output_path, 'w') as jsonfile:
+                    json.dump(metadata, jsonfile, indent=4)
+                
+                logger.info(f"  ✓ Generated: {output_filename}")
+                
+            except Exception as e:
+                logger.error(f"Error generating solar radiation for {hru_name}: {e}")
+                return False
+        
+        return True
+    
+    def generate_potential_evapotranspiration_timeseries(self):
+        """Generate potential evapotranspiration time series for all HRU/landCoverType combinations."""
+        logger.info("Generating potential evapotranspiration time series...")
+        
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            logger.info(f"Processing HRU: {hru_name}")
+            
+            # Get HRU catchment data
+            hru_catchment = None
+            for hru in self.catchment_data.get('HRUs', []):
+                if hru['name'] == hru_name:
+                    hru_catchment = hru
+                    break
+            
+            if not hru_catchment:
+                logger.error(f"Could not find catchment data for HRU: {hru_name}")
+                return False
+            
+            # Get land cover types
+            land_cover_types = hru_catchment.get('subcatchment', {}).get('landCoverTypes', [])
+            
+            for lc_type in land_cover_types:
+                lc_name = lc_type['name']
+                logger.info(f"    Generating PET for landcover: {lc_name}")
+                
+                try:
+                    # Get evaporation parameters from land cover type
+                    evap_params = lc_type.get('evaporation', {})
+                    degree_offset = evap_params.get('growingDegreeOffset', 0.0)
+                    solar_scaling = evap_params.get('solarRadiationScalingFactor', 60.0)
+                    
+                    logger.info(f"      Parameters: degree_offset={degree_offset}, solar_scaling={solar_scaling}")
+                    
+                    # Read temperature data from the HRU's temperature/precipitation file
+                    temp_data = []
+                    
+                    with open(hru_info['csv_path'], 'r', encoding='utf-8') as f:
+                        reader = csv.reader(f)
+                        headers = next(reader)
+                        
+                        # Find temperature column
+                        temp_col_idx = None
+                        for i, header in enumerate(headers):
+                            if 'temperature' in header.lower() or header.lower() in ['temp', 'air_temperature']:
+                                temp_col_idx = i
+                                break
+                        
+                        if temp_col_idx is None:
+                            logger.error(f"Could not find temperature column in {hru_info['csv_path']}")
+                            return False
+                        
+                        for row in reader:
+                            try:
+                                timestamp_str = row[0]
+                                timestamp = datetime.datetime.fromisoformat(timestamp_str.replace('T', ' '))
+                                temperature = float(row[temp_col_idx])
+                                
+                                # Calculate simple temperature-based PET
+                                # Using degree-day approach: PET = max(0, (T + offset) / scaling_factor)
+                                adjusted_temp = temperature + degree_offset
+                                pet = max(0.0, adjusted_temp / solar_scaling) if adjusted_temp > 0 else 0.0
+                                
+                                temp_data.append([timestamp.isoformat(), hru_name, pet])
+                                
+                            except (ValueError, IndexError) as e:
+                                continue
+                    
+                    # Find output filename
+                    output_filename = None
+                    for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                        if ts_hru['name'] == hru_name:
+                            try:
+                                lc_types_ts = ts_hru['timeSeries']['subcatchment']['landCoverTypes']
+                                for lc_ts in lc_types_ts:
+                                    if lc_ts['name'] == lc_name:
+                                        pet_info = lc_ts['timeSeries']['potentialEvapotranspiration']
+                                        output_filename = pet_info['fileName']
+                                        break
+                                if output_filename:
+                                    break
+                            except KeyError:
+                                pass
+                    
+                    if not output_filename:
+                        output_filename = f"{hru_name}_{lc_name}_potentialEvapotranspiration"
+                    
+                    # Check if files already exist
+                    csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                    json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                    
+                    if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                        logger.info(f"      ✓ Skipping (files exist): {output_filename}")
+                        continue
+                    
+                    # Write CSV file
+                    with open(csv_output_path, 'w', newline='') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow(['timestamp', 'location', 'potentialEvapotranspiration'])
+                        writer.writerows(temp_data)
+                    
+                    # Create metadata
+                    metadata = {
+                        'description': f'Potential evapotranspiration for {hru_name} - {lc_name}',
+                        'start_datetime': hru_info['start_datetime'].isoformat(),
+                        'timestep_seconds': hru_info['timestep_seconds'],
+                        'num_records': len(temp_data),
+                        'hru_name': hru_name,
+                        'land_cover_type': lc_name,
+                        'degree_offset': degree_offset,
+                        'solar_scaling': solar_scaling,
+                        'units': 'mm/day',
+                        'calculation_method': 'simple temperature-based'
+                    }
+                    
+                    # Write JSON file
+                    with open(json_output_path, 'w') as jsonfile:
+                        json.dump(metadata, jsonfile, indent=4)
+                    
+                    logger.info(f"      ✓ Generated: {output_filename}")
+                    
+                except Exception as e:
+                    logger.error(f"Error generating PET for {hru_name}/{lc_name}: {e}")
+                    return False
+        
+        return True
+    
+    def _load_timeseries_from_files(self, csv_path, json_path, TimeSeries):
+        """Load TimeSeries data from CSV and JSON files."""
+        # Create a new TimeSeries object
+        ts = TimeSeries()
+        
+        # Load metadata from JSON file
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+                # Add all metadata to TimeSeries
+                for key, value in metadata.items():
+                    ts.add_metadata(key, value)
+        except Exception as e:
+            logger.warning(f"Could not load metadata from {json_path}: {e}")
+        
+        # Load data from CSV file
+        try:
+            with open(csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader)
+                
+                # Find indices for required columns
+                timestamp_idx = 0  # First column is timestamp
+                location_idx = 1 if len(headers) > 1 else None  # Second column is location
+                
+                # Find temperature and precipitation columns
+                temp_idx = None
+                precip_idx = None
+                
+                for i, header in enumerate(headers):
+                    header_lower = header.lower()
+                    if 'temperature' in header_lower or header_lower in ['temp', 'air_temperature']:
+                        temp_idx = i
+                    elif 'precipitation' in header_lower or header_lower in ['precip', 'rain']:
+                        precip_idx = i
+                
+                if temp_idx is None or precip_idx is None:
+                    raise ValueError(f"Could not find temperature and/or precipitation columns in {csv_path}")
+                
+                # Add columns to TimeSeries
+                ts.add_column('air_temperature')
+                ts.add_column('precipitation')
+                
+                # Read data rows
+                for row in reader:
+                    try:
+                        # Parse timestamp
+                        timestamp_str = row[timestamp_idx]
+                        timestamp = datetime.datetime.fromisoformat(timestamp_str.replace('T', ' ').replace('Z', ''))
+                        
+                        # Get location
+                        location = row[location_idx] if location_idx and location_idx < len(row) else 'unknown'
+                        
+                        # Get temperature and precipitation
+                        temperature = float(row[temp_idx])
+                        precipitation = float(row[precip_idx])
+                        
+                        # Add data to TimeSeries
+                        ts.add_data(timestamp, location, {
+                            'air_temperature': temperature,
+                            'precipitation': precipitation
+                        })
+                        
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"Skipping invalid row in {csv_path}: {e}")
+                        continue
+                        
+        except Exception as e:
+            logger.error(f"Error loading CSV data from {csv_path}: {e}")
+            raise
+        
+        return ts
+    
+    def generate_snow_hydrology_timeseries(self):
+        """Generate snow hydrology time series for all HRU/landCoverType combinations."""
+        logger.info("Generating snow hydrology time series...")
+        
+        # Try to use project modules first
+        try:
+            from calculate_snow_hydrology import calculate_snow_hydrology
+            from timeSeries import TimeSeries
+            logger.info("Using project snow hydrology calculation module...")
+            return self._generate_snow_hydrology_with_project_module()
+        except ImportError as e:
+            logger.error(f"Project modules not available for snow hydrology: {e}")
+            return False
+    
+    def _generate_snow_hydrology_with_project_module(self):
+        """Generate snow hydrology using the project module."""
+        from calculate_snow_hydrology import calculate_snow_hydrology
+        from timeSeries import TimeSeries
+        
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            logger.info(f"Processing HRU: {hru_name}")
+            
+            # Get HRU catchment data
+            hru_catchment = None
+            for hru in self.catchment_data.get('HRUs', []):
+                if hru['name'] == hru_name:
+                    hru_catchment = hru
+                    break
+            
+            if not hru_catchment:
+                logger.error(f"Could not find catchment data for HRU: {hru_name}")
+                return False
+            
+            # Get subcatchment precipitation adjustments
+            precip_adjustments = hru_catchment.get('subcatchment', {}).get('precipitationAdjustments', {})
+            subcatchment_rainfall_mult = precip_adjustments.get('rainfallMultiplier', 1.0)
+            subcatchment_snowfall_mult = precip_adjustments.get('snowfallMultiplier', 1.0)
+            snow_offset = precip_adjustments.get('snowOffset', 0.0)
+            
+            # Get land cover types
+            land_cover_types = hru_catchment.get('subcatchment', {}).get('landCoverTypes', [])
+            
+            for lc_type in land_cover_types:
+                lc_name = lc_type['name']
+                logger.info(f"    Generating snow hydrology for landcover: {lc_name}")
+                
+                try:
+                    # Extract snow hydrology parameters from catchment structure
+                    snowpack = lc_type.get('snowpack', {})
+                    initial_snow_depth = snowpack.get('depth', 0.0)
+                    snowpack_melt_temp = snowpack.get('meltTemperature', 0.0)
+                    melt_rate = snowpack.get('degreeDayMeltRate', 3.0)
+                    
+                    # Calculate melt temperature as snowpack melt temp + snow offset
+                    melt_temperature = snowpack_melt_temp + snow_offset
+                    
+                    # Get rainfall temperature (default to 0.0)
+                    rainfall_temperature = 0.0
+                    
+                    # Calculate multipliers
+                    lc_rainfall_mult = lc_type.get('rainfallMultiplier', 1.0)
+                    lc_snowfall_mult = lc_type.get('snowfallMultiplier', 1.0)
+                    
+                    rainfall_multiplier = lc_rainfall_mult * subcatchment_rainfall_mult
+                    snowfall_multiplier = lc_snowfall_mult * subcatchment_snowfall_mult
+                    
+                    logger.info(f"      Parameters: initial_depth={initial_snow_depth}, melt_temp={melt_temperature}, melt_rate={melt_rate}")
+                    logger.info(f"      Multipliers: rainfall={rainfall_multiplier}, snowfall={snowfall_multiplier}")
+                    
+                    # Find output filename from time series configuration
+                    output_filename = None
+                    for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                        if ts_hru['name'] == hru_name:
+                            try:
+                                landcover_types_ts = ts_hru['timeSeries']['subcatchment']['landCoverTypes']
+                                for lc_ts in landcover_types_ts:
+                                    if lc_ts['name'] == lc_name:
+                                        rain_snow_info = lc_ts['timeSeries']['rainAndSnow']
+                                        output_filename = rain_snow_info['fileName']
+                                        break
+                                if output_filename:
+                                    break
+                            except KeyError:
+                                pass
+                    
+                    if not output_filename:
+                        output_filename = f"{hru_name}_{lc_name}_rainAndSnow"
+                    
+                    # Check if files already exist
+                    csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                    json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                    
+                    if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                        logger.info(f"      ✓ Skipping (files exist): {output_filename}")
+                        continue
+                    
+                    # Load the temperature/precipitation time series
+                    temp_precip_ts = self._load_timeseries_from_files(
+                        hru_info['csv_path'], 
+                        hru_info['json_path'],
+                        TimeSeries
+                    )
+                    
+                    # Call calculate_snow_hydrology function
+                    snow_hydrology_ts = calculate_snow_hydrology(
+                        input_timeseries=temp_precip_ts,
+                        initial_snow_depth=initial_snow_depth,
+                        melt_temperature=melt_temperature,
+                        rainfall_temperature=rainfall_temperature,
+                        snowfall_multiplier=snowfall_multiplier,
+                        rainfall_multiplier=rainfall_multiplier,
+                        melt_rate=melt_rate,
+                        output_name=output_filename
+                    )
+                    
+                    # Save the time series
+                    csv_path, json_path = snow_hydrology_ts.save_to_files(
+                        name=output_filename,
+                        output_dir=self.base_folder
+                    )
+                    
+                    logger.info(f"      ✓ Generated: {output_filename}")
+                    logger.info(f"        CSV: {csv_path}")
+                    logger.info(f"        JSON: {json_path}")
+                    
+                except Exception as e:
+                    logger.error(f"Error generating snow hydrology for {hru_name}/{lc_name}: {e}")
+                    return False
+        
+        return True
+    
+    def run_generation(self):
+        """Run the complete time series generation process."""
+        logger.info("=" * 60)
+        logger.info("HYDROLOGICAL MODEL TIME SERIES GENERATOR")
+        logger.info("=" * 60)
+        logger.info(f"Replace existing files: {'Yes' if self.replace_all else 'No (--no-replace)'}")
+        logger.info("=" * 60)
+        
+        # Step 1: Load input files
+        if not self.load_input_files():
+            logger.error("Generation failed: Could not load input files")
+            return False
+        
+        # Step 2: Validate temperature/precipitation files
+        if not self.validate_temperature_precipitation_files():
+            logger.error("Generation failed: Temperature/precipitation validation failed")
+            return False
+        
+        # Step 3: Generate solar radiation time series
+        if not self.generate_solar_radiation_timeseries():
+            logger.error("Generation failed: Solar radiation generation failed")
+            return False
+        
+        # Step 4: Generate potential evapotranspiration time series
+        if not self.generate_potential_evapotranspiration_timeseries():
+            logger.error("Generation failed: Potential evapotranspiration generation failed")
+            return False
+        
+        # Step 5: Generate snow hydrology time series
+        if not self.generate_snow_hydrology_timeseries():
+            logger.error("Generation failed: Snow hydrology generation failed")
+            return False
+        
+        logger.info("=" * 60)
+        logger.info("TIME SERIES GENERATION COMPLETED SUCCESSFULLY")
+        logger.info("=" * 60)
+        logger.info("Generated time series:")
+        logger.info("✓ Solar radiation for each HRU")
+        logger.info("✓ Potential evapotranspiration for each HRU/landCoverType combination")
+        logger.info("✓ Snow hydrology (rain and snow) for each HRU/landCoverType combination")
+        logger.info("")
+        logger.info("Next steps (not yet implemented):")
+        logger.info("- Soil temperature series for each bucket")
+        logger.info("- Precipitation routing between buckets")
+        logger.info("- Flow calculations to and within reaches")
+        
+        return True
+    
+    def interactive_file_selection(self):
+        """Allow user to interactively select input files."""
+        if not self.root:
+            logger.error("GUI not available for file selection")
+            return False
+        
+        self.root.deiconify()  # Show the window
+        
+        # Select catchment file
+        catchment_file = filedialog.askopenfilename(
+            title="Select Catchment Structure File",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile="generated_catchment.json"
+        )
+        
+        if not catchment_file:
+            logger.info("No catchment file selected")
+            self.root.withdraw()
+            return False
+        
+        # Select time series file
+        timeseries_file = filedialog.askopenfilename(
+            title="Select Model Time Series File",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile="ModelTimeSeries.json"
+        )
+        
+        if not timeseries_file:
+            logger.info("No time series file selected")
+            self.root.withdraw()
+            return False
+        
+        self.replace_all = self.replace_all
+        self.catchment_file = catchment_file
+        self.timeseries_file = timeseries_file
+        
+        self.root.withdraw()
+        return True
+
+
+def main():
+    """Main function with command line argument handling."""
+    
+    # Default file paths (with correct path prefix)
+    default_catchment = "../testData/generated_catchment.json"
+    default_timeseries = "../testData/ModelTimeSeries.json"
+    
+    # Parse command line arguments
+    replace_all = True  # Default behavior: overwrite existing files
+    
+    # Check command line arguments
+    if len(sys.argv) == 1:
+        # No arguments - use defaults
+        catchment_file = default_catchment
+        timeseries_file = default_timeseries
+        
+    elif len(sys.argv) == 2:
+        arg1 = sys.argv[1]
+        if arg1 == "--gui":
+            # GUI mode requested
+            generator = HydrologicalTimeSeriesGenerator(replace_all=replace_all)
+            if generator.interactive_file_selection():
+                generator.run_generation()
+            else:
+                logger.info("File selection cancelled")
+            return
+        elif arg1 == "--no-replace":
+            # Don't replace existing files
+            replace_all = False
+            catchment_file = default_catchment
+            timeseries_file = default_timeseries
+        else:
+            # One argument - assume it's the catchment file
+            catchment_file = sys.argv[1]
+            timeseries_file = default_timeseries
+        
+    elif len(sys.argv) == 3:
+        arg1, arg2 = sys.argv[1], sys.argv[2]
+        if arg1 == "--no-replace":
+            # Don't replace existing files, with custom catchment file
+            replace_all = False
+            catchment_file = arg2
+            timeseries_file = default_timeseries
+        else:
+            # Two arguments - catchment and timeseries files
+            catchment_file = arg1
+            timeseries_file = arg2
+            
+    elif len(sys.argv) == 4:
+        arg1, arg2, arg3 = sys.argv[1], sys.argv[2], sys.argv[3]
+        if arg1 == "--no-replace":
+            # Don't replace existing files, with custom files
+            replace_all = False
+            catchment_file = arg2
+            timeseries_file = arg3
+        elif arg1 == "--gui":
+            logger.error("--gui cannot be combined with file arguments")
+            return
+        else:
+            logger.error("Too many arguments")
+            return
+        
+    else:
+        usage_message = """Usage:
+  python hydro_timeseries_generator.py
+  python hydro_timeseries_generator.py --no-replace
+  python hydro_timeseries_generator.py <catchment_file>
+  python hydro_timeseries_generator.py --no-replace <catchment_file>
+  python hydro_timeseries_generator.py <catchment_file> <timeseries_file>
+  python hydro_timeseries_generator.py --no-replace <catchment_file> <timeseries_file>
+  python hydro_timeseries_generator.py --gui
+
+Options:
+  --no-replace    Skip files that already exist (default: overwrite)
+  --gui          Interactive file selection mode
+
+Default files:
+  Catchment: {default_catchment}
+  Time series: {default_timeseries}""".format(
+            default_catchment=default_catchment,
+            default_timeseries=default_timeseries
+        )
+        logger.info(usage_message)
+        return
+    
+    # Check if files exist
+    if not os.path.exists(catchment_file):
+        logger.error(f"Catchment file not found: {catchment_file}")
+        return
+    
+    if not os.path.exists(timeseries_file):
+        logger.error(f"Time series file not found: {timeseries_file}")
+        return
+    
+    # Create generator and run
+    logger.info(f"Replace existing files: {'Yes' if replace_all else 'No'}")
+    logger.info(f"Log file: {log_file_path}")
+    generator = HydrologicalTimeSeriesGenerator(catchment_file, timeseries_file, replace_all)
+    generator.run_generation()
+
+
+if __name__ == "__main__":
+    main()
