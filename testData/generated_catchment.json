@@ -28,7 +28,7 @@
                         },
                         "soilTemperature": {
                             "thermalConductivity": 0.7,
-                            "specificHeatFreezeThaw": 6.6,
+                            "specificHeatFreezeThaw": 0.1,
                             "snowDepthFactor": -0.25
                         },
                         "buckets": [
@@ -146,14 +146,14 @@
                         },
                         "soilTemperature": {
                             "thermalConductivity": 0.7,
-                            "specificHeatFreezeThaw": 6.6,
+                            "specificHeatFreezeThaw": 0.1,
                             "snowDepthFactor": -0.25
                         },
                         "buckets": [
                             {
                                 "name": "Direct Runoff",
                                 "abbreviation": "DR",
-                                "receivesPrecipitation": false,
+                                "receivesPrecipitation": true,
                                 "useInSMDCalculation": false,
                                 "relativeAreaIndex": 1.0,
                                 "maximumInfiltration": 100.0,
