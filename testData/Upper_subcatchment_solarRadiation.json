@@ -1,13 +1,12 @@
 {
-    "uuid": "d33a781a-ebd9-490f-9f26-9aef1485c5e5",
-    "latitude": "45.0",
-    "longitude": "15.0",
-    "source": "Python solar radiation model (standalone)",
-    "generation_time": "2025-07-08 18:20:50",
-    "location_id": "Upper",
-    "timezone_offset": "1.0",
-    "start_time": "2010-01-01T12:00:00",
-    "end_time": "2013-12-31T12:00:00",
-    "step_seconds": "86400",
-    "num_records": "1461"
+    "description": "Solar radiation time series for Upper",
+    "start_datetime": "2010-01-01T12:00:00",
+    "timestep_seconds": 86400,
+    "num_records": 1461,
+    "coordinates": {
+        "decimalLatitude": 45.0,
+        "decimalLongitude": -15.0
+    },
+    "units": "W/m\u00b2",
+    "calculation_method": "built-in simple model"
 }

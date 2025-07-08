@@ -1,0 +1,24 @@
+{
+    "description": "Rain and snow dynamics for Lower - Forest",
+    "start_datetime": "2010-01-01T00:00:00",
+    "timestep_seconds": 86400,
+    "num_records": 1461,
+    "hru_name": "Lower",
+    "land_cover_type": "Forest",
+    "snow_offset": 0.0,
+    "rain_multiplier_sc": 1.0,
+    "snow_multiplier_sc": 1.0,
+    "rain_multiplier_lc": 1.0,
+    "snow_multiplier_lc": 1.0,
+    "melt_temperature": 0.0,
+    "degree_day_melt_rate": 3.0,
+    "initial_snowpack_depth": 0.0,
+    "units": {
+        "air_temperature": "degrees_C",
+        "snowfall_depth": "mm",
+        "rain_depth": "mm",
+        "snowpack_depth": "mm_SWE",
+        "snowmelt_depth": "mm"
+    },
+    "calculation_method": "degree-day snowmelt model with scaling factors"
+}
