@@ -12,6 +12,9 @@ class CatchmentJSONEditor:
         self.root.title("Catchment JSON Editor")
         self.root.geometry("1400x900")
         
+        # Set window icon
+        self.set_window_icon()
+        
         # Data storage
         self.data = {}
         self.file_path = None
@@ -32,6 +35,35 @@ class CatchmentJSONEditor:
             
         except Exception as e:
             self.handle_error("Initialization", e)
+    
+    def set_window_icon(self):
+        """Set the window icon to inca_man.jpg or INCAMan.png if available."""
+        try:
+            # Try to find inca_man.jpg first, then INCAMan.png in common locations
+            icon_paths = [
+                "inca_man.jpg",
+                "INCAMan.png",
+                os.path.join(os.path.dirname(__file__), "inca_man.jpg"),
+                os.path.join(os.path.dirname(__file__), "INCAMan.png"),
+                os.path.join(os.path.dirname(__file__), "..", "inca_man.jpg"),
+                os.path.join(os.path.dirname(__file__), "..", "INCAMan.png"),
+                os.path.join(os.getcwd(), "inca_man.jpg"),
+                os.path.join(os.getcwd(), "INCAMan.png")
+            ]
+            
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    # Handle both .jpg and .png files
+                    try:
+                        icon = tk.PhotoImage(file=icon_path)
+                        self.root.iconphoto(False, icon)
+                        break
+                    except tk.TclError:
+                        # If PhotoImage fails with JPEG, continue to try other formats
+                        continue
+        except Exception as e:
+            # If anything fails with the icon, just continue without icon
+            pass
     
     def setup_error_handling(self):
         """Setup comprehensive error handling"""
