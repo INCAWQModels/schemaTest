@@ -1,0 +1,8 @@
+{
+    "uuid": "78ba17ed-a13d-4a48-b146-7096f280d467",
+    "calculation_type": "water_routing",
+    "value_type": "waterInputs",
+    "location": "Lower_Forest_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

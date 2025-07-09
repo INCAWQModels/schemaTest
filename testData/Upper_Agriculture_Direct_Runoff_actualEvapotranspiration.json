@@ -1,0 +1,8 @@
+{
+    "uuid": "a46fef1d-61a6-4ca4-8e2e-6d2c2b43ca65",
+    "calculation_type": "water_routing",
+    "value_type": "actualEvapotranspiration",
+    "location": "Upper_Agriculture_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

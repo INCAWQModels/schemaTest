@@ -1,0 +1,8 @@
+{
+    "uuid": "c0470cce-2895-45dd-bc1c-6a66900998ef",
+    "calculation_type": "water_routing",
+    "value_type": "actualEvapotranspiration",
+    "location": "Middle_Agriculture_Groundwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

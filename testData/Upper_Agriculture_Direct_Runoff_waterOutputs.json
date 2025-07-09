@@ -1,0 +1,10 @@
+{
+    "uuid": "b09dff85-af60-4591-aa9d-6fddbc0ed4d5",
+    "calculation_type": "water_routing",
+    "value_type": "waterOutputs_and_runoffToReach",
+    "location": "Upper_Agriculture_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm",
+    "bucket_index": 0,
+    "reach_fraction": 0.1
+}

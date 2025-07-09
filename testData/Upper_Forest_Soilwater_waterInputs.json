@@ -1,0 +1,8 @@
+{
+    "uuid": "c409d3e1-8cc6-43ae-8c94-37dd629ba1db",
+    "calculation_type": "water_routing",
+    "value_type": "waterInputs",
+    "location": "Upper_Forest_Soilwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

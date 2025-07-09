@@ -6,7 +6,7 @@
     "hru_name": "Middle",
     "land_cover_type": "Forest",
     "degree_offset": 0.0,
-    "solar_scaling": 60.0,
+    "solar_scaling": 220.0,
     "units": "mm/day",
     "calculation_method": "simple temperature-based"
 }

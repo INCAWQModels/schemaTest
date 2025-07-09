@@ -6,7 +6,7 @@
     "hru_name": "Upper",
     "land_cover_type": "Agriculture",
     "degree_offset": 3.0,
-    "solar_scaling": 150.0,
+    "solar_scaling": 300.0,
     "units": "mm/day",
     "calculation_method": "simple temperature-based"
 }

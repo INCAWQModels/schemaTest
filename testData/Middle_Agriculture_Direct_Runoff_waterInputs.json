@@ -1,0 +1,8 @@
+{
+    "uuid": "6cbf7a9a-991c-42ab-8aca-13b60a0efebb",
+    "calculation_type": "water_routing",
+    "value_type": "waterInputs",
+    "location": "Middle_Agriculture_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

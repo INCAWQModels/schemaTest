@@ -1,0 +1,8 @@
+{
+    "uuid": "0de75900-d97e-4cb3-a529-866f78e237d1",
+    "calculation_type": "water_routing",
+    "value_type": "waterLevel",
+    "location": "Middle_Agriculture_Groundwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

@@ -1,0 +1,8 @@
+{
+    "uuid": "9a18e33e-d7b1-45b4-9bfb-52e9e5f7b533",
+    "calculation_type": "water_routing",
+    "value_type": "actualEvapotranspiration",
+    "location": "Middle_Forest_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

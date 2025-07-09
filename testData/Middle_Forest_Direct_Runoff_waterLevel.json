@@ -1,0 +1,8 @@
+{
+    "uuid": "df51a7d1-77f3-484c-9704-c48fd307d63b",
+    "calculation_type": "water_routing",
+    "value_type": "waterLevel",
+    "location": "Middle_Forest_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

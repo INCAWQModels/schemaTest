@@ -1,0 +1,8 @@
+{
+    "uuid": "2b433300-2cb8-4ca2-9213-3fdd1a1326e3",
+    "calculation_type": "water_routing",
+    "value_type": "actualEvapotranspiration",
+    "location": "Middle_Forest_Soilwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

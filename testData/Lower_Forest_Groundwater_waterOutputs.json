@@ -1,0 +1,10 @@
+{
+    "uuid": "ed0164b0-1958-4675-bf7d-30fbabb1424a",
+    "calculation_type": "water_routing",
+    "value_type": "waterOutputs_and_runoffToReach",
+    "location": "Lower_Forest_Groundwater",
+    "timestep_seconds": 86400,
+    "units": "mm",
+    "bucket_index": 2,
+    "reach_fraction": 0.0
+}

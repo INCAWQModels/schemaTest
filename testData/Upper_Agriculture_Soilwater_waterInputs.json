@@ -1,0 +1,8 @@
+{
+    "uuid": "0b7fda0e-946d-4d7b-9af4-0f768730697b",
+    "calculation_type": "water_routing",
+    "value_type": "waterInputs",
+    "location": "Upper_Agriculture_Soilwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

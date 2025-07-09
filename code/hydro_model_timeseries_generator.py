@@ -1123,8 +1123,8 @@ def main():
     """Main function with command line argument handling."""
     
     # Default file paths (with correct path prefix)
-    default_catchment = "../testData/generated_catchment.json"
-    default_timeseries = "../testData/modelTimeSeries.json"
+    default_catchment = "testData/generated_catchment.json"
+    default_timeseries = "testData/modelTimeSeries.json"
     
     # Parse command line arguments
     replace_all = True  # Default behavior: overwrite existing files

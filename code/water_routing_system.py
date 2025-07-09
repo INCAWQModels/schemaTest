@@ -399,8 +399,21 @@ class WaterRoutingSystem:
         """Initialize bucket states from catchment data."""
         bucket_states = []
         
-        for bucket in buckets:
+        print("  Bucket connections setup:")
+        for i, bucket in enumerate(buckets):
+            bucket_name = bucket.get('name', f'Bucket_{i}')
+            connections = bucket.get('connections', [])
             water_depth = bucket.get('waterDepth', {})
+            
+            # Show connections routing
+            if connections:
+                reach_fraction = connections[i] if i < len(connections) else 0.0
+                other_routing = [(j, frac) for j, frac in enumerate(connections) if j != i and frac > 0]
+                routing_info = f"to reach: {reach_fraction:.3f}"
+                if other_routing:
+                    routing_info += f", to buckets: {other_routing}"
+                print(f"    {i}. {bucket_name}: {routing_info}")
+            
             state = {
                 'current_depth': water_depth.get('current', 1.0),
                 'tightly_bound': water_depth.get('tightlyBound', 100.0),
@@ -697,16 +710,60 @@ class WaterRoutingSystem:
                         f"{key}_{bucket_name}"
                     )
                     
-                # Water outputs file
+                # Water outputs file (with runoffToReach calculation)
                 if bucket_config['water_outputs_file']:
-                    self.generate_single_output_file(
+                    # Get connections array for this bucket
+                    bucket_data = None
+                    landcover_data = self.find_landcover_data(config['hru_name'], config['landcover_name'])
+                    if landcover_data:
+                        buckets_list = landcover_data.get('buckets', [])
+                        if i < len(buckets_list):
+                            bucket_data = buckets_list[i]
+                    
+                    self.generate_water_outputs_file(
                         bucket_config['water_outputs_file'],
                         timesteps,
                         [row[i] for row in results['water_outputs']],
-                        'waterOutputs',
-                        f"{key}_{bucket_name}"
+                        f"{key}_{bucket_name}",
+                        i,  # bucket index
+                        bucket_data
                     )
                     
+    def generate_water_outputs_file(self, filename, timesteps, values, location, bucket_index, bucket_data):
+        """Generate a water outputs time series file with runoffToReach calculation."""
+        ts = TimeSeries(filename)
+        ts.add_column('waterOutputs')
+        ts.add_column('runoffToReach')
+        
+        # Add metadata
+        ts.add_metadata("calculation_type", "water_routing")
+        ts.add_metadata("value_type", "waterOutputs_and_runoffToReach")
+        ts.add_metadata("location", location)
+        ts.add_metadata("timestep_seconds", 86400)
+        ts.add_metadata("units", "mm")
+        ts.add_metadata("bucket_index", bucket_index)
+        
+        # Get connections array and calculate reach fraction
+        reach_fraction = 0.0
+        if bucket_data:
+            connections = bucket_data.get('connections', [])
+            if bucket_index < len(connections):
+                reach_fraction = connections[bucket_index]
+                ts.add_metadata("reach_fraction", reach_fraction)
+                print(f"    Bucket {bucket_index} sends {reach_fraction:.3f} of runoff to reach")
+        
+        # Add data
+        for timestamp, water_output in zip(timesteps, values):
+            runoff_to_reach = water_output * reach_fraction
+            ts.add_data(timestamp, location, {
+                'waterOutputs': water_output,
+                'runoffToReach': runoff_to_reach
+            })
+            
+        # Save files
+        csv_file, json_file = ts.save_to_files(filename, self.testdata_folder)
+        print(f"  ✓ Generated {filename} (with runoffToReach)")
+        
     def generate_single_output_file(self, filename, timesteps, values, value_name, location):
         """Generate a single output time series file."""
         ts = TimeSeries(filename)

@@ -1,0 +1,8 @@
+{
+    "uuid": "c60ccc9a-729c-472e-ac50-e811441d0d42",
+    "calculation_type": "water_routing",
+    "value_type": "actualEvapotranspiration",
+    "location": "Lower_Forest_Groundwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

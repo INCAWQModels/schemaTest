@@ -1,0 +1,10 @@
+{
+    "uuid": "b5be0879-b5b1-44ab-9c28-44691d1cee36",
+    "calculation_type": "water_routing",
+    "value_type": "waterOutputs_and_runoffToReach",
+    "location": "Middle_Forest_Soilwater",
+    "timestep_seconds": 86400,
+    "units": "mm",
+    "bucket_index": 1,
+    "reach_fraction": 0.5
+}

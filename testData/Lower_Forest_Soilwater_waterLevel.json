@@ -1,0 +1,8 @@
+{
+    "uuid": "a7623849-7ddd-4a74-b6d1-9940f12c4c47",
+    "calculation_type": "water_routing",
+    "value_type": "waterLevel",
+    "location": "Lower_Forest_Soilwater",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}

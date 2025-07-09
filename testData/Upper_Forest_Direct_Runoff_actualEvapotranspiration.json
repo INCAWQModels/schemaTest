@@ -1,0 +1,8 @@
+{
+    "uuid": "9feec3a2-c644-4aae-9135-200fef4a7884",
+    "calculation_type": "water_routing",
+    "value_type": "actualEvapotranspiration",
+    "location": "Upper_Forest_Direct Runoff",
+    "timestep_seconds": 86400,
+    "units": "mm"
+}
