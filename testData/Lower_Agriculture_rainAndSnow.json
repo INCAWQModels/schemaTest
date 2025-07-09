@@ -2,7 +2,6 @@
     "description": "Rain and snow dynamics for Lower - Agriculture",
     "start_datetime": "2010-01-01T00:00:00",
     "timestep_seconds": 86400,
-    "timestep_scale_factor": 1.0,
     "num_records": 1461,
     "hru_name": "Lower",
     "land_cover_type": "Agriculture",
@@ -21,6 +20,5 @@
         "snowpack_depth": "mm_SWE",
         "snowmelt_depth": "mm"
     },
-    "calculation_method": "degree-day snowmelt model with timestep scaling and landcover factors",
-    "formula": "snowmelt = degree_day_melt_rate * (T - melt_temp) * (timestep_seconds / 86400)"
+    "calculation_method": "degree-day snowmelt model with scaling factors"
 }

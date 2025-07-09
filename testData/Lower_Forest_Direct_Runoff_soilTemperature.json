@@ -1,0 +1,18 @@
+{
+    "description": "Soil temperature for Lower - Forest - Direct Runoff",
+    "start_datetime": "2010-01-01T00:00:00",
+    "timestep_seconds": 86400,
+    "num_records": 1461,
+    "hru_name": "Lower",
+    "land_cover_type": "Forest",
+    "bucket_name": "Direct Runoff",
+    "bucket_abbreviation": "DR",
+    "thermal_conductivity": "0.7",
+    "specific_heat_capacity": "6.6",
+    "snow_depth_factor": "-0.25",
+    "effective_depth": "0.2",
+    "initial_temperature": "5.0",
+    "receives_precipitation": "False",
+    "units": "degrees_C",
+    "calculation_method": "thermal conductivity model with snow insulation"
+}

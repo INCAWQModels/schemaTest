@@ -8,7 +8,8 @@ This script generates time series data for hydrological modeling by:
 3. Generating solar radiation time series for each HRU
 4. Generating potential evapotranspiration time series for each HRU/landcover combination
 5. Generating rain and snow time series for each HRU/landcover combination
-6. Writing results to specified output locations
+6. Generating soil temperature time series for each bucket in each HRU/landcover combination
+7. Writing results to specified output locations
 
 Uses only Python standard library components plus existing project code.
 All output is written to a log file instead of console.
@@ -69,6 +70,7 @@ try:
     # Import project modules
     from calculate_solar_radiation import compute_radiation_timeseries
     from calculate_rain_and_snow import calculate_rain_and_snow_with_params, load_timeseries_from_files
+    from calculate_soil_temperature import calculate_soil_temperature_with_landcover_params
     from timeSeries import TimeSeries
 except ImportError as e:
     logger.warning(f"Could not import project modules: {e}")
@@ -84,7 +86,7 @@ class TimeSeriesValidator:
     def load_timeseries_metadata(self, csv_file_path, json_file_path):
         """Load and parse time series metadata from JSON file."""
         try:
-            with open(json_file_path, 'r', encoding='utf-8') as f:
+            with open(json_file_path, 'r') as f:
                 metadata = json.load(f)
             
             # Extract key information
@@ -92,45 +94,52 @@ class TimeSeriesValidator:
             timestep_seconds = metadata.get('timestep_seconds')
             num_records = metadata.get('num_records')
             
-            if start_datetime:
-                start_dt = datetime.datetime.fromisoformat(start_datetime.replace('T', ' '))
-            else:
-                start_dt = None
+            # Convert start_datetime to datetime object if it's a string
+            if isinstance(start_datetime, str):
+                try:
+                    start_datetime = datetime.datetime.fromisoformat(start_datetime.replace('Z', '+00:00'))
+                except ValueError:
+                    # Try alternative parsing
+                    start_datetime = datetime.datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")
             
             return {
-                'start_datetime': start_dt,
+                'start_datetime': start_datetime,
                 'timestep_seconds': timestep_seconds,
                 'num_records': num_records,
                 'metadata': metadata
             }
+            
         except Exception as e:
             logger.error(f"Error loading metadata from {json_file_path}: {e}")
             return None
     
     def validate_csv_structure(self, csv_file_path):
-        """Validate CSV file structure and count records."""
+        """Validate the structure of a CSV file."""
         try:
-            with open(csv_file_path, 'r', encoding='utf-8') as f:
+            with open(csv_file_path, 'r') as f:
                 reader = csv.reader(f)
-                headers = next(reader)
-                row_count = sum(1 for row in reader)
+                headers = next(reader)  # First row should be headers
+                
+                # Count actual rows
+                row_count = 0
+                for row in reader:
+                    if row:  # Skip empty rows
+                        row_count += 1
                 
                 return {
+                    'valid': True,
                     'headers': headers,
-                    'row_count': row_count,
-                    'valid': True
+                    'row_count': row_count
                 }
+                
         except Exception as e:
-            logger.error(f"Error validating CSV {csv_file_path}: {e}")
             return {
-                'headers': [],
-                'row_count': 0,
                 'valid': False,
                 'error': str(e)
             }
     
     def check_timeseries_consistency(self, timeseries_list):
-        """Check if all time series have consistent parameters."""
+        """Check that all time series have consistent parameters."""
         if not timeseries_list:
             return False, "No time series provided"
         
@@ -319,97 +328,71 @@ class HydrologicalTimeSeriesGenerator:
         """Generate solar radiation time series for all HRUs."""
         logger.info("Generating solar radiation time series...")
         
-        # Try to use project module first
-        try:
-            from calculate_solar_radiation import compute_radiation_timeseries
-            logger.info("Using project solar radiation calculation module...")
-            return self._generate_solar_with_project_module()
-        except ImportError:
-            logger.info("Project module not available, using built-in calculation...")
-            return self._generate_solar_builtin()
-    
-    def _generate_solar_with_project_module(self):
-        """Generate solar radiation using the project module."""
-        # Implementation for project module would go here
-        logger.warning("Project module solar calculation not yet implemented, falling back to built-in")
-        return self._generate_solar_builtin()
-    
-    def _generate_solar_builtin(self):
-        """Generate solar radiation using built-in calculation."""
-        logger.info("Using built-in solar radiation calculation...")
-        
+        # Process each HRU
         for hru_info in self.hru_timeseries_info:
             hru_name = hru_info['hru_name']
-            logger.info(f"Generating solar radiation for {hru_name}...")
-            
-            # Get coordinates
             coordinates = hru_info['coordinates']
-            latitude = coordinates.get('decimalLatitude', 45.0)
-            longitude = coordinates.get('decimalLongitude', -15.0)
             
-            # Handle longitude convention
-            if longitude < 0:
-                longitude = -longitude
+            logger.info(f"Processing HRU: {hru_name}")
             
-            logger.info(f"  Coordinates: {latitude}°N, {longitude}°E")
-            
-            # Get time series parameters
-            start_dt = hru_info['start_datetime']
-            timestep_seconds = hru_info['timestep_seconds']
-            num_records = hru_info['num_records']
-            
-            # Calculate solar radiation at the midpoint between adjacent time periods
-            midpoint_offset = timestep_seconds // 2
-            adjusted_start = start_dt + datetime.timedelta(seconds=midpoint_offset)
-            
-            timezone_offset = longitude / 15.0
-            
-            logger.info(f"  Using built-in calculation at midpoint: {adjusted_start.time()}")
-            
-            # Create output files using built-in calculation
             try:
-                # Create a simple TimeSeries-like structure
+                # Extract parameters from the time series info
+                start_datetime = hru_info['start_datetime']
+                timestep_seconds = hru_info['timestep_seconds']
+                num_records = hru_info['num_records']
+                
+                # Calculate end datetime
+                total_seconds = num_records * timestep_seconds
+                end_datetime = start_datetime + datetime.timedelta(seconds=total_seconds)
+                
+                # Start from the beginning of the first day
+                adjusted_start = start_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+                
+                # Generate solar radiation data
                 solar_data = []
-                current_time = adjusted_start
+                current_datetime = adjusted_start
                 
                 for i in range(num_records):
-                    # Simple solar radiation calculation (placeholder)
-                    # This is a very basic calculation - in reality you'd want proper solar models
-                    day_of_year = current_time.timetuple().tm_yday
-                    hour_of_day = current_time.hour + current_time.minute / 60.0
+                    # Calculate solar radiation at the midpoint of the timestep
+                    # This represents average conditions during the time period
+                    midpoint_time = current_datetime + datetime.timedelta(seconds=timestep_seconds / 2)
                     
-                    # Simple solar calculation based on time of day and latitude
-                    solar_declination = 23.45 * math.sin(math.radians(360 * (284 + day_of_year) / 365))
-                    hour_angle = 15 * (hour_of_day - 12)
+                    latitude = coordinates.get('decimalLatitude', 45.0)
+                    longitude = coordinates.get('decimalLongitude', 0.0)
                     
-                    solar_elevation = math.asin(
-                        math.sin(math.radians(latitude)) * math.sin(math.radians(solar_declination)) +
-                        math.cos(math.radians(latitude)) * math.cos(math.radians(solar_declination)) * 
-                        math.cos(math.radians(hour_angle))
+                    # Simple solar radiation calculation using midpoint time
+                    day_of_year = midpoint_time.timetuple().tm_yday
+                    hour = midpoint_time.hour + midpoint_time.minute / 60.0
+                    
+                    # Solar declination
+                    declination = 23.45 * math.sin(math.radians(360 * (284 + day_of_year) / 365))
+                    
+                    # Hour angle
+                    hour_angle = 15 * (hour - 12)
+                    
+                    # Solar elevation angle
+                    lat_rad = math.radians(latitude)
+                    dec_rad = math.radians(declination)
+                    hour_rad = math.radians(hour_angle)
+                    
+                    elevation = math.asin(
+                        math.sin(lat_rad) * math.sin(dec_rad) +
+                        math.cos(lat_rad) * math.cos(dec_rad) * math.cos(hour_rad)
                     )
                     
-                    if solar_elevation > 0:
-                        # Very simple solar radiation calculation (W/m²)
-                        solar_radiation = 1000 * math.sin(solar_elevation)
+                    # Solar radiation (simplified model)
+                    if elevation > 0:
+                        solar_radiation = 1000 * math.sin(elevation)  # W/m²
                     else:
                         solar_radiation = 0.0
                     
-                    solar_data.append([current_time.isoformat(), hru_name, solar_radiation])
-                    current_time += datetime.timedelta(seconds=timestep_seconds)
+                    solar_data.append([current_datetime.isoformat(), hru_name, solar_radiation])
+                    
+                    # Move to next timestep
+                    current_datetime += datetime.timedelta(seconds=timestep_seconds)
                 
-                # Find output filename
-                output_filename = None
-                for ts_hru in self.timeseries_data['catchment']['HRUs']:
-                    if ts_hru['name'] == hru_name:
-                        try:
-                            solar_info = ts_hru['timeSeries']['subcatchment']['solarRadiation']
-                            output_filename = solar_info['fileName']
-                            break
-                        except KeyError:
-                            pass
-                
-                if not output_filename:
-                    output_filename = f"{hru_name}_subcatchment_solarRadiation"
+                # Create output filename
+                output_filename = f"{hru_name}_solarRadiation"
                 
                 # Check if files already exist
                 csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
@@ -492,38 +475,54 @@ class HydrologicalTimeSeriesGenerator:
                 
                 logger.info(f"      Parameters: solarRadiationScalingFactor={solar_scaling}, growingDegreeOffset={degree_offset}")
                 
-                # Read temperature data and calculate PET
-                temp_data = []
                 try:
-                    with open(csv_path, 'r') as csvfile:
-                        reader = csv.reader(csvfile)
-                        headers = next(reader)
+                    # Load temperature data
+                    temp_data = []
+                    with open(csv_path, 'r') as f:
+                        reader = csv.reader(f)
+                        headers = next(reader)  # Skip header
                         
-                        # Find temperature column
-                        temp_col_idx = None
+                        # Find temperature column index
+                        temp_idx = None
                         for i, header in enumerate(headers):
                             if 'temperature' in header.lower():
-                                temp_col_idx = i
+                                temp_idx = i
                                 break
                         
-                        if temp_col_idx is None:
-                            logger.error(f"Temperature column not found in {csv_path}")
-                            return False
+                        if temp_idx is None:
+                            logger.error(f"No temperature column found in {csv_path}")
+                            continue
                         
                         # Process each row
                         for row in reader:
-                            if len(row) > temp_col_idx:
+                            if len(row) > temp_idx:
                                 try:
-                                    timestamp = datetime.datetime.fromisoformat(row[0])
-                                    temperature = float(row[temp_col_idx])
+                                    timestamp_str = row[0]
+                                    location = row[1]
+                                    temperature = float(row[temp_idx])
+                                    
+                                    # Parse timestamp
+                                    timestamp = datetime.datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                    
+                                    # Calculate solar radiation at midpoint of timestep (like solar radiation generator)
+                                    midpoint_time = timestamp + datetime.timedelta(seconds=hru_info['timestep_seconds'] / 2)
+                                    day_of_year = midpoint_time.timetuple().tm_yday
+                                    hour = midpoint_time.hour + midpoint_time.minute / 60.0
+                                    
+                                    # Simplified solar radiation calculation at midpoint
+                                    if 6 <= hour <= 18:  # Daylight hours
+                                        solar_factor = math.sin(math.pi * (hour - 6) / 12)
+                                        rs = 300 * solar_factor  # Simplified calculation
+                                    else:
+                                        rs = 0.0
+                                    
+                                    # Convert to MJ/m²/day
+                                    rs = rs * 0.0864
                                     
                                     # Calculate adjusted temperature
                                     adjusted_temp = temperature + degree_offset
                                     
-                                    # Simple PET calculation: assume 200 W/m² average solar radiation
-                                    rs = 200.0 * 0.0864  # Convert to MJ/m²/day
-                                    
-                                    # Apply temperature constraint: PET = 0 when adjusted_temp <= 0
+                                    # Calculate PET using modified Jensen-Haise equation
                                     if adjusted_temp <= 0.0:
                                         pet = 0.0
                                     else:
@@ -604,7 +603,6 @@ class HydrologicalTimeSeriesGenerator:
             
             # Get temperature and precipitation data paths
             csv_path = hru_info['csv_path']
-            json_path = hru_info['json_path']
             
             # Get landCoverTypes for this HRU from catchment data
             hru_catchment_data = None
@@ -617,64 +615,19 @@ class HydrologicalTimeSeriesGenerator:
                 logger.error(f"No catchment data found for {hru_name}")
                 continue
             
-            landcover_types = hru_catchment_data.get('subcatchment', {}).get('landCoverTypes', [])
+            # Get subcatchment parameters
+            subcatchment_data = hru_catchment_data.get('subcatchment', {})
+            precip_adjustments = subcatchment_data.get('precipitationAdjustments', {})
+            snow_offset = precip_adjustments.get('snowOffset', 0.0)
+            rain_mult_sc = precip_adjustments.get('rainfallMultiplier', 1.0)
+            snow_mult_sc = precip_adjustments.get('snowfallMultiplier', 1.0)
+            
+            landcover_types = subcatchment_data.get('landCoverTypes', [])
             if not landcover_types:
                 logger.warning(f"No land cover types found for {hru_name}")
                 continue
             
             logger.info(f"  Found {len(landcover_types)} land cover types")
-            
-            # Load temperature and precipitation data directly from CSV (same approach as PET)
-            temp_precip_data = []
-            try:
-                with open(csv_path, 'r') as csvfile:
-                    reader = csv.reader(csvfile)
-                    headers = next(reader)
-                    
-                    # Find temperature and precipitation columns
-                    temp_col_idx = None
-                    precip_col_idx = None
-                    
-                    for i, header in enumerate(headers):
-                        if 'temperature' in header.lower():
-                            temp_col_idx = i
-                        elif 'precipitation' in header.lower():
-                            precip_col_idx = i
-                    
-                    if temp_col_idx is None:
-                        logger.error(f"Temperature column not found in {csv_path}")
-                        continue
-                    
-                    if precip_col_idx is None:
-                        logger.error(f"Precipitation column not found in {csv_path}")
-                        continue
-                    
-                    # Process each row to build the data
-                    for row in reader:
-                        if len(row) > max(temp_col_idx, precip_col_idx):
-                            try:
-                                timestamp = datetime.datetime.fromisoformat(row[0])
-                                temperature = float(row[temp_col_idx])
-                                precipitation = float(row[precip_col_idx])
-                                
-                                temp_precip_data.append({
-                                    'timestamp': timestamp,
-                                    'location': hru_name,
-                                    'temperature': temperature,
-                                    'precipitation': precipitation
-                                })
-                            except (ValueError, IndexError):
-                                continue
-                
-                logger.info(f"  Loaded {len(temp_precip_data)} records from {hru_name}")
-                
-                if len(temp_precip_data) == 0:
-                    logger.warning(f"No valid data found for {hru_name}")
-                    continue
-                
-            except Exception as e:
-                logger.error(f"Error loading time series data for {hru_name}: {e}")
-                continue
             
             # Calculate rain and snow for each landCoverType
             for lc_data in landcover_types:
@@ -683,16 +636,7 @@ class HydrologicalTimeSeriesGenerator:
                 
                 logger.info(f"    Calculating rain/snow for {lc_name} ({lc_abbrev})")
                 
-                # Get subcatchment parameters
-                subcatchment_params = hru_catchment_data.get('subcatchment', {})
-                
-                # Get precipitation adjustments
-                precip_adj = subcatchment_params.get('precipitationAdjustments', {})
-                snow_offset = precip_adj.get('snowOffset', 0.0)
-                rain_mult_sc = precip_adj.get('rainfallMultiplier', 1.0)
-                snow_mult_sc = precip_adj.get('snowfallMultiplier', 1.0)
-                
-                # Get landcover-specific parameters
+                # Get landcover parameters
                 rain_mult_lc = lc_data.get('rainfallMultiplier', 1.0)
                 snow_mult_lc = lc_data.get('snowfallMultiplier', 1.0)
                 snowpack_params = lc_data.get('snowpack', {})
@@ -700,64 +644,79 @@ class HydrologicalTimeSeriesGenerator:
                 melt_rate = snowpack_params.get('degreeDayMeltRate', 3.0)
                 initial_depth = snowpack_params.get('depth', 0.0)
                 
-                logger.info(f"      Parameters: snowOffset={snow_offset}, meltTemp={melt_temp}, meltRate={melt_rate}")
+                logger.info(f"      Parameters: rain_mult={rain_mult_lc}, snow_mult={snow_mult_lc}, melt_temp={melt_temp}")
                 
                 try:
-                    # Calculate rain and snow using direct data processing (similar to PET calculation)
+                    # Load temperature and precipitation data
                     rain_snow_data = []
+                    snowpack_depth = initial_depth  # Track snowpack depth
                     
-                    # Track snowpack depth for this landcover type
-                    snowpack_depth = initial_depth
-                    
-                    # Get timestep scaling factor from metadata
-                    timestep_seconds = hru_info['timestep_seconds']
-                    timestep_scale_factor = timestep_seconds / 86400.0  # Scale from daily to actual timestep
-                    
-                    logger.info(f"      Using timestep: {timestep_seconds}s (scale factor: {timestep_scale_factor:.4f})")
-                    
-                    for data_point in temp_precip_data:
-                        timestamp = data_point['timestamp']
-                        location = data_point['location']
-                        temperature = data_point['temperature']
-                        precipitation = data_point['precipitation']
+                    with open(csv_path, 'r') as f:
+                        reader = csv.reader(f)
+                        headers = next(reader)  # Skip header
                         
-                        # Determine if precipitation falls as rain or snow
-                        critical_temp = snow_offset  # Temperature threshold for snow vs rain
+                        # Find column indices
+                        temp_idx = None
+                        precip_idx = None
+                        for i, header in enumerate(headers):
+                            if 'temperature' in header.lower():
+                                temp_idx = i
+                            elif 'precipitation' in header.lower():
+                                precip_idx = i
                         
-                        if temperature >= critical_temp:
-                            # Rain
-                            rain_depth = rain_mult_lc * rain_mult_sc * precipitation
-                            snowfall_depth = 0.0
-                        else:
-                            # Snow
-                            rain_depth = 0.0
-                            snowfall_depth = snow_mult_lc * snow_mult_sc * precipitation
+                        if temp_idx is None or precip_idx is None:
+                            logger.error(f"Required columns not found in {csv_path}")
+                            continue
                         
-                        # Calculate snowmelt using degree day model with timestep scaling
-                        if temperature > melt_temp:
-                            # Potential melt scaled by timestep
-                            potential_melt = melt_rate * (temperature - melt_temp) * timestep_scale_factor
-                            
-                            # Actual melt is limited by available snow (previous snowpack + new snowfall)
-                            available_snow = snowpack_depth + snowfall_depth
-                            actual_melt = min(potential_melt, available_snow)
-                        else:
-                            actual_melt = 0.0
-                        
-                        # Update snowpack depth
-                        snowpack_depth = snowpack_depth + snowfall_depth - actual_melt
-                        snowpack_depth = max(0.0, snowpack_depth)  # Cannot be negative
-                        
-                        # Store the calculated values
-                        rain_snow_data.append([
-                            timestamp.isoformat(),
-                            location,
-                            temperature,      # air_temperature
-                            snowfall_depth,   # snowfall_depth
-                            rain_depth,       # rain_depth
-                            snowpack_depth,   # snowpack_depth
-                            actual_melt       # snowmelt_depth
-                        ])
+                        # Process each row
+                        for row in reader:
+                            if len(row) > max(temp_idx, precip_idx):
+                                try:
+                                    timestamp_str = row[0]
+                                    location = row[1]
+                                    temperature = float(row[temp_idx])
+                                    precipitation = float(row[precip_idx]) if row[precip_idx] else 0.0
+                                    
+                                    # Parse timestamp
+                                    timestamp = datetime.datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                    
+                                    # Determine if precipitation is rain or snow
+                                    if temperature > snow_offset:
+                                        # Rain
+                                        rain_depth = rain_mult_lc * rain_mult_sc * precipitation
+                                        snowfall_depth = 0.0
+                                    else:
+                                        # Snow
+                                        rain_depth = 0.0
+                                        snowfall_depth = snow_mult_lc * snow_mult_sc * precipitation
+                                    
+                                    # Calculate snowmelt using degree day model
+                                    if temperature > melt_temp:
+                                        # Potential melt
+                                        potential_melt = melt_rate * (temperature - melt_temp)
+                                        
+                                        # Actual melt is limited by available snow (previous snowpack + new snowfall)
+                                        available_snow = snowpack_depth + snowfall_depth
+                                        actual_melt = min(potential_melt, available_snow)
+                                    else:
+                                        actual_melt = 0.0
+                                    
+                                    # Update snowpack depth
+                                    snowpack_depth = snowpack_depth + snowfall_depth - actual_melt
+                                    snowpack_depth = max(0.0, snowpack_depth)  # Cannot be negative
+                                    
+                                    # Store the calculated values
+                                    rain_snow_data.append([
+                                        timestamp.isoformat(),
+                                        location,
+                                        temperature,      # air_temperature
+                                        snowfall_depth,   # snowfall_depth
+                                        rain_depth,       # rain_depth
+                                        snowpack_depth,   # snowpack_depth
+                                        actual_melt       # snowmelt_depth
+                                    ])
+                                except (ValueError, IndexError):
+                                    continue
                     
                     if len(rain_snow_data) == 0:
                         logger.warning(f"No rain/snow data generated for {hru_name}/{lc_name}")
@@ -792,13 +751,10 @@ class HydrologicalTimeSeriesGenerator:
                         logger.info(f"      ✓ Skipping (files exist): {output_filename}")
                         continue
                     
-                    # Convert to CSV-compatible format is no longer needed since we already have the right format
-                    
                     # Write CSV file
                     with open(csv_output_path, 'w', newline='') as csvfile:
                         writer = csv.writer(csvfile)
-                        writer.writerow(['timestamp', 'location', 'air_temperature', 
-                                        'snowfall_depth', 'rain_depth', 'snowpack_depth', 'snowmelt_depth'])
+                        writer.writerow(['timestamp', 'location', 'air_temperature', 'snowfall_depth', 'rain_depth', 'snowpack_depth', 'snowmelt_depth'])
                         writer.writerows(rain_snow_data)
                     
                     # Create metadata
@@ -806,7 +762,6 @@ class HydrologicalTimeSeriesGenerator:
                         'description': f'Rain and snow dynamics for {hru_name} - {lc_name}',
                         'start_datetime': hru_info['start_datetime'].isoformat(),
                         'timestep_seconds': hru_info['timestep_seconds'],
-                        'timestep_scale_factor': timestep_scale_factor,
                         'num_records': len(rain_snow_data),
                         'hru_name': hru_name,
                         'land_cover_type': lc_name,
@@ -825,8 +780,7 @@ class HydrologicalTimeSeriesGenerator:
                             'snowpack_depth': 'mm_SWE',
                             'snowmelt_depth': 'mm'
                         },
-                        'calculation_method': 'degree-day snowmelt model with timestep scaling and landcover factors',
-                        'formula': 'snowmelt = degree_day_melt_rate * (T - melt_temp) * (timestep_seconds / 86400)'
+                        'calculation_method': 'degree-day snowmelt model with scaling factors'
                     }
                     
                     # Write JSON file
@@ -837,6 +791,237 @@ class HydrologicalTimeSeriesGenerator:
                     
                 except Exception as e:
                     logger.error(f"Error generating rain/snow for {hru_name}/{lc_name}: {e}")
+                    return False
+        
+        return True
+    
+    def generate_soil_temperature_timeseries(self):
+        """Generate soil temperature time series for all buckets in each HRU/landcover combination."""
+        logger.info("Generating soil temperature time series...")
+        
+        # Process each HRU
+        for hru_info in self.hru_timeseries_info:
+            hru_name = hru_info['hru_name']
+            logger.info(f"Processing HRU: {hru_name}")
+            
+            # Get landCoverTypes for this HRU from catchment data
+            hru_catchment_data = None
+            for catchment_hru in self.catchment_data['HRUs']:
+                if catchment_hru['name'] == hru_name:
+                    hru_catchment_data = catchment_hru
+                    break
+            
+            if not hru_catchment_data:
+                logger.error(f"No catchment data found for {hru_name}")
+                continue
+            
+            landcover_types = hru_catchment_data.get('subcatchment', {}).get('landCoverTypes', [])
+            if not landcover_types:
+                logger.warning(f"No land cover types found for {hru_name}")
+                continue
+            
+            logger.info(f"  Found {len(landcover_types)} land cover types")
+            
+            # Process each landCoverType
+            for lc_data in landcover_types:
+                lc_name = lc_data.get('name', 'Unknown')
+                lc_abbrev = lc_data.get('abbreviation', 'UK')
+                
+                logger.info(f"    Processing soil temperature for {lc_name} ({lc_abbrev})")
+                
+                # Find the corresponding rain and snow file to use as input
+                rain_snow_filename = None
+                for ts_hru in self.timeseries_data['catchment']['HRUs']:
+                    if ts_hru['name'] == hru_name:
+                        try:
+                            landcover_types_ts = ts_hru['timeSeries']['subcatchment']['landCoverTypes']
+                            for lc_ts in landcover_types_ts:
+                                if lc_ts['name'] == lc_name:
+                                    rain_snow_info = lc_ts['timeSeries']['rainAndSnow']
+                                    rain_snow_filename = rain_snow_info['fileName']
+                                    break
+                            if rain_snow_filename:
+                                break
+                        except KeyError:
+                            pass
+                
+                if not rain_snow_filename:
+                    rain_snow_filename = f"{hru_name}_{lc_name}_rainAndSnow"
+                    logger.warning(f"Rain/snow filename not found, using default: {rain_snow_filename}")
+                
+                # Load the rain and snow time series (contains air temperature and snow depth)
+                try:
+                    rain_snow_csv = os.path.join(self.base_folder, f"{rain_snow_filename}.csv")
+                    rain_snow_json = os.path.join(self.base_folder, f"{rain_snow_filename}.json")
+                    
+                    if not os.path.exists(rain_snow_csv) or not os.path.exists(rain_snow_json):
+                        logger.error(f"Rain/snow files not found: {rain_snow_filename}")
+                        continue
+                    
+                    # Load the rain and snow time series using local function
+                    rain_snow_csv = os.path.join(self.base_folder, f"{rain_snow_filename}.csv")
+                    rain_snow_json = os.path.join(self.base_folder, f"{rain_snow_filename}.json")
+                    
+                    if not os.path.exists(rain_snow_csv) or not os.path.exists(rain_snow_json):
+                        logger.error(f"Rain/snow files not found: {rain_snow_filename}")
+                        continue
+                    
+                    # Load metadata from JSON
+                    try:
+                        with open(rain_snow_json, 'r') as f:
+                            metadata = json.load(f)
+                    except Exception as e:
+                        logger.error(f"Error loading JSON metadata: {e}")
+                        continue
+                    
+                    # Load data from CSV
+                    data = []
+                    columns = []
+                    
+                    try:
+                        with open(rain_snow_csv, 'r') as f:
+                            reader = csv.reader(f)
+                            columns = next(reader)  # First row is header
+                            
+                            for row in reader:
+                                if not row:  # Skip empty rows
+                                    continue
+                                
+                                try:
+                                    # Convert timestamp to datetime object
+                                    timestamp_str = row[0]
+                                    timestamp = datetime.datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                                    
+                                    # Convert numeric values
+                                    processed_row = [timestamp]
+                                    for i, value in enumerate(row[1:], 1):
+                                        if i == 1:  # Location column
+                                            processed_row.append(value)
+                                        else:
+                                            try:
+                                                processed_row.append(float(value) if value else None)
+                                            except ValueError:
+                                                processed_row.append(value)
+                                    
+                                    data.append(processed_row)
+                                
+                                except Exception:
+                                    continue  # Skip problematic rows
+                    
+                    except Exception as e:
+                        logger.error(f"Error reading CSV file: {e}")
+                        continue
+                    
+                    # Create TimeSeries object
+                    TSClass = TimeSeries if TimeSeries is not None else SimplifiedTimeSeries
+                    input_ts = TSClass()
+                    input_ts.columns = columns
+                    input_ts.data = data
+                    input_ts.metadata = metadata
+                    
+                    # Get timestep from metadata
+                    timestep_seconds = hru_info['timestep_seconds']
+                    
+                    # Calculate soil temperature for all buckets in this landcover
+                    bucket_results = calculate_soil_temperature_with_landcover_params(
+                        input_timeseries=input_ts,
+                        landcover_params=lc_data,
+                        timestep_seconds=timestep_seconds,
+                        temp_column="air_temperature",
+                        snow_column="snowpack_depth"
+                    )
+                    
+                    logger.info(f"      Generated soil temperature for {len(bucket_results)} buckets")
+                    
+                    # Save results for each bucket
+                    for bucket_name, soil_ts in bucket_results.items():
+                        bucket_abbrev = ""
+                        
+                        # Find bucket abbreviation
+                        for bucket in lc_data.get('buckets', []):
+                            if bucket.get('name') == bucket_name:
+                                bucket_abbrev = bucket.get('abbreviation', '')
+                                break
+                        
+                        # Create output filename
+                        safe_hru = hru_name.replace(" ", "_")
+                        safe_lc = lc_name.replace(" ", "_")
+                        safe_bucket = bucket_name.replace(" ", "_")
+                        output_filename = f"{safe_hru}_{safe_lc}_{safe_bucket}_soilTemperature"
+                        
+                        # Check if files already exist
+                        csv_output_path = os.path.join(self.base_folder, f"{output_filename}.csv")
+                        json_output_path = os.path.join(self.base_folder, f"{output_filename}.json")
+                        
+                        if not self.replace_all and os.path.exists(csv_output_path) and os.path.exists(json_output_path):
+                            logger.info(f"        ✓ Skipping (files exist): {output_filename}")
+                            continue
+                        
+                        # Extract soil temperature data for CSV
+                        soil_temp_data = []
+                        
+                        # Find the soil temperature column index
+                        soil_temp_idx = None
+                        for i, col in enumerate(soil_ts.columns):
+                            if 'soil_temperature' in str(col).lower():
+                                soil_temp_idx = i
+                                break
+                        
+                        if soil_temp_idx is None:
+                            logger.error(f"        Could not find soil temperature column in {soil_ts.columns}")
+                            continue
+                        
+                        for row in soil_ts.data:
+                            if len(row) > soil_temp_idx:
+                                timestamp = row[0]
+                                location = row[1] if len(row) > 1 else "Unknown"
+                                soil_temp = row[soil_temp_idx] if row[soil_temp_idx] is not None else None
+                                
+                                if soil_temp is not None:
+                                    soil_temp_data.append([
+                                        timestamp.isoformat() if hasattr(timestamp, 'isoformat') else str(timestamp),
+                                        location,
+                                        soil_temp
+                                    ])
+                        
+                        if len(soil_temp_data) == 0:
+                            logger.warning(f"No soil temperature data generated for {bucket_name}")
+                            continue
+                        
+                        # Write CSV file
+                        with open(csv_output_path, 'w', newline='') as csvfile:
+                            writer = csv.writer(csvfile)
+                            writer.writerow(['timestamp', 'location', 'soil_temperature_c'])
+                            writer.writerows(soil_temp_data)
+                        
+                        # Create metadata
+                        metadata = {
+                            'description': f'Soil temperature for {hru_name} - {lc_name} - {bucket_name}',
+                            'start_datetime': hru_info['start_datetime'].isoformat(),
+                            'timestep_seconds': hru_info['timestep_seconds'],
+                            'num_records': len(soil_temp_data),
+                            'hru_name': hru_name,
+                            'land_cover_type': lc_name,
+                            'bucket_name': bucket_name,
+                            'bucket_abbreviation': bucket_abbrev,
+                            'thermal_conductivity': soil_ts.metadata.get('thermal_conductivity', 'unknown'),
+                            'specific_heat_capacity': soil_ts.metadata.get('specific_heat_capacity', 'unknown'),
+                            'snow_depth_factor': soil_ts.metadata.get('snow_depth_factor', 'unknown'),
+                            'effective_depth': soil_ts.metadata.get('effective_depth', 'unknown'),
+                            'initial_temperature': soil_ts.metadata.get('initial_temperature', 'unknown'),
+                            'receives_precipitation': soil_ts.metadata.get('receives_precipitation', 'unknown'),
+                            'units': 'degrees_C',
+                            'calculation_method': 'thermal conductivity model with snow insulation'
+                        }
+                        
+                        # Write JSON file
+                        with open(json_output_path, 'w') as jsonfile:
+                            json.dump(metadata, jsonfile, indent=4)
+                        
+                        logger.info(f"        ✓ Generated: {output_filename}")
+                    
+                except Exception as e:
+                    logger.error(f"Error generating soil temperature for {hru_name}/{lc_name}: {e}")
                     return False
         
         return True
@@ -874,6 +1059,11 @@ class HydrologicalTimeSeriesGenerator:
             logger.error("Generation failed: Rain and snow generation failed")
             return False
         
+        # Step 6: Generate soil temperature time series
+        if not self.generate_soil_temperature_timeseries():
+            logger.error("Generation failed: Soil temperature generation failed")
+            return False
+        
         logger.info("=" * 60)
         logger.info("TIME SERIES GENERATION COMPLETED SUCCESSFULLY")
         logger.info("=" * 60)
@@ -881,9 +1071,9 @@ class HydrologicalTimeSeriesGenerator:
         logger.info("✓ Solar radiation for each HRU")
         logger.info("✓ Potential evapotranspiration for each HRU/landCoverType combination")
         logger.info("✓ Rain and snow dynamics for each HRU/landCoverType combination")
+        logger.info("✓ Soil temperature for each bucket in each HRU/landCoverType combination")
         logger.info("")
         logger.info("Next steps (not yet implemented):")
-        logger.info("- Soil temperature series for each bucket")
         logger.info("- Precipitation routing between buckets")
         logger.info("- Flow calculations to and within reaches")
         
