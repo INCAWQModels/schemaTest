@@ -1,4 +1,6 @@
-"""this code has t obe modified by Claude (regenerated) whenever the component schemas are changed"""
+"""this code has to be modified whenever the underlying schemas change. 
+This can either be done by Claude (regenerated) or manually whenever the 
+component schemas are changed"""
 import json
 import os
 from typing import Dict, Any, List
@@ -115,6 +117,8 @@ def create_reach(particle_size_classes: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Create a reach object."""
     return {
         "flow": 1.0,
+        "velocity": 0.1,
+        "volume": 10000,
         "dimensions": {
             "length": 100.0,
             "widthAtSedimentSurface": 1.0,

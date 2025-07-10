@@ -257,6 +257,8 @@
       },
       "reach": {
         "flow": 1.0,
+        "velocity": 0.1,
+        "volume": 10000,
         "dimensions": {
           "length": 10000.0,
           "widthAtSedimentSurface": 1.0,
@@ -270,7 +272,7 @@
           "f": 0.341,
           "n": 0.1
         },
-        "downstreamHRU": 0
+        "downstreamHRU": 1
       }
     },
     {
@@ -528,6 +530,8 @@
       },
       "reach": {
         "flow": 1.0,
+        "velocity": 0.1,
+        "volume": 10000,
         "dimensions": {
           "length": 100.0,
           "widthAtSedimentSurface": 1.0,
@@ -541,7 +545,7 @@
           "f": 0.341,
           "n": 0.1
         },
-        "downstreamHRU": 0
+        "downstreamHRU": 2
       }
     },
     {
@@ -799,6 +803,8 @@
       },
       "reach": {
         "flow": 1.0,
+        "velocity": 0.1,
+        "volume": 10000,
         "dimensions": {
           "length": 100.0,
           "widthAtSedimentSurface": 1.0,
