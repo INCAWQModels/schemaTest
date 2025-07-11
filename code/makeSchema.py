@@ -92,6 +92,7 @@ def create_land_cover_type(name: str, abbreviation: str, buckets: List[Dict[str,
     return {
         "name": name,
         "abbreviation": abbreviation,
+        "percentCover": 25.0,
         "rainfallMultiplier": 1.0,
         "snowfallMultiplier": 1.0,
         "evaporation": {

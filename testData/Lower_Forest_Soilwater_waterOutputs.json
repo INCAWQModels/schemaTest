@@ -1,10 +1,10 @@
 {
-    "uuid": "d45a0d83-0025-45a1-8c80-3d0ecf929a93",
+    "uuid": "50e1a07d-acc7-4fca-a966-e8fa0e6e6d1e",
     "calculation_type": "water_routing",
     "value_type": "waterOutputs_and_runoffToReach",
     "location": "Lower_Forest_Soilwater",
     "timestep_seconds": 86400,
     "units": "mm",
     "bucket_index": 1,
-    "reach_fraction": 0.0
+    "reach_fraction": 0.3
 }

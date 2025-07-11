@@ -16,7 +16,6 @@
             "abbreviation": "F",
             "rainfallMultiplier": 1.0,
             "snowfallMultiplier": 1.0,
-             "percentCover": 25.0,
             "evaporation": {
               "canopyInterception": 0.0,
               "growingDegreeOffset": 5.0,
@@ -135,7 +134,6 @@
             "abbreviation": "A",
             "rainfallMultiplier": 1.0,
             "snowfallMultiplier": 1.0,
-            "percentCover": 75.0,
             "evaporation": {
               "canopyInterception": 0.0,
               "growingDegreeOffset": 3.0,
@@ -291,7 +289,6 @@
             "abbreviation": "F",
             "rainfallMultiplier": 1.0,
             "snowfallMultiplier": 1.0,
-             "percentCover": 50.0,
             "evaporation": {
               "canopyInterception": 0.0,
               "growingDegreeOffset": 0.0,
@@ -410,7 +407,6 @@
             "abbreviation": "A",
             "rainfallMultiplier": 1.0,
             "snowfallMultiplier": 1.0,
-             "percentCover": 50.0,
             "evaporation": {
               "canopyInterception": 0.0,
               "growingDegreeOffset": 4.0,
@@ -566,7 +562,6 @@
             "abbreviation": "F",
             "rainfallMultiplier": 1.0,
             "snowfallMultiplier": 1.0,
-            "percentCover": 40.0,
             "evaporation": {
               "canopyInterception": 0.0,
               "growingDegreeOffset": 0.0,
@@ -685,7 +680,6 @@
             "abbreviation": "A",
             "rainfallMultiplier": 1.0,
             "snowfallMultiplier": 1.0,
-            "percentCover": 60.0,
             "evaporation": {
               "canopyInterception": 0.0,
               "growingDegreeOffset": 4.0,

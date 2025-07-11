@@ -9,6 +9,13 @@
                 "default": "Land Cover"  },
             "abbreviation": { "type": "string",
                 "default": "LC"  },
+            "percentCover": {
+                "type": "number",
+                "description": "the amount of a subcatchment covered by the land cover type",
+                "default": 25.0,
+                "minimum": 0.0,
+                "maximum": 100.0
+            },
             "rainfallMultiplier": {
                 "type": "number",
                 "description": "multiplier to apply to precipitation when temperature is above snowfall temperature",
