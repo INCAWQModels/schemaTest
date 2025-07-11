@@ -1,5 +1,5 @@
 {
-    "uuid": "905247b2-796d-40b7-9f20-92e9eee90f42",
+    "uuid": "ffa6a448-9c3f-42ea-82c2-0966d764636b",
     "name": "Middle_Agriculture_waterOutputs",
     "location": "Middle_Agriculture",
     "description": "Aggregated waterOutputs for Middle_Agriculture",
@@ -7,5 +7,6 @@
         "runoffToReach",
         "actualEvapotranspiration"
     ],
-    "aggregation_level": "landcover_to_subcatchment"
+    "aggregation_level": "landcover_to_subcatchment",
+    "timestep_seconds": 86400
 }

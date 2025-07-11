@@ -1,5 +1,5 @@
 {
-    "uuid": "f7dcca52-7570-41cc-80c7-5cc0d06c1469",
+    "uuid": "5bc7e105-97af-4cf3-b8e6-8c700ddaa7bf",
     "name": "Lower_Agriculture_waterOutputs",
     "location": "Lower_Agriculture",
     "description": "Aggregated waterOutputs for Lower_Agriculture",
@@ -7,5 +7,6 @@
         "runoffToReach",
         "actualEvapotranspiration"
     ],
-    "aggregation_level": "landcover_to_subcatchment"
+    "aggregation_level": "landcover_to_subcatchment",
+    "timestep_seconds": 86400
 }

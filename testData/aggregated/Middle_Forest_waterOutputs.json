@@ -1,5 +1,5 @@
 {
-    "uuid": "7964dd40-f6d7-461b-aaea-6dcac2fa05b0",
+    "uuid": "8e0a7f7c-4b5f-4948-a534-4e9e17dc18a2",
     "name": "Middle_Forest_waterOutputs",
     "location": "Middle_Forest",
     "description": "Aggregated waterOutputs for Middle_Forest",
@@ -7,5 +7,6 @@
         "runoffToReach",
         "actualEvapotranspiration"
     ],
-    "aggregation_level": "landcover_to_subcatchment"
+    "aggregation_level": "landcover_to_subcatchment",
+    "timestep_seconds": 86400
 }

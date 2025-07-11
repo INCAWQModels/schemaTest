@@ -1,5 +1,5 @@
 {
-    "uuid": "65299bfb-9686-45d0-9f72-18c121392e1b",
+    "uuid": "1a414e49-2ad5-4217-b9eb-b5fd4f9cfdee",
     "name": "Lower_Forest_waterOutputs",
     "location": "Lower_Forest",
     "description": "Aggregated waterOutputs for Lower_Forest",
@@ -7,5 +7,6 @@
         "runoffToReach",
         "actualEvapotranspiration"
     ],
-    "aggregation_level": "landcover_to_subcatchment"
+    "aggregation_level": "landcover_to_subcatchment",
+    "timestep_seconds": 86400
 }

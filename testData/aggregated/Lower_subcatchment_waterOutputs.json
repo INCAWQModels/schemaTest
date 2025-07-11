@@ -1,5 +1,5 @@
 {
-    "uuid": "37439dc1-8093-4f4e-bbd1-3210bbd051ca",
+    "uuid": "044aef05-555c-478c-bef2-7286010b882f",
     "name": "Lower_subcatchment_waterOutputs",
     "location": "Lower_subcatchment",
     "description": "Aggregated waterOutputs for Lower_subcatchment",
@@ -7,5 +7,6 @@
         "runoffToReach",
         "actualEvapotranspiration"
     ],
-    "aggregation_level": "landcover_to_subcatchment"
+    "aggregation_level": "landcover_to_subcatchment",
+    "timestep_seconds": 86400
 }

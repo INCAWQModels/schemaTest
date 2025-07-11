@@ -175,7 +175,49 @@ class ModelAggregatorCLI:
         
         return data
     
-    def create_aggregated_timeseries(self, aggregated_data, name, location):
+    def load_timeseries_metadata(self, filepath):
+        """Load metadata from a TimeSeries JSON file."""
+        json_path = filepath.replace('.csv', '.json')
+        try:
+            with open(json_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load metadata from {json_path}: {e}")
+            return {}
+
+    def extract_timestep_seconds(self, bucket_configs, data_folder):
+        """Extract timestep_seconds from input TimeSeries JSON files."""
+        timestep_seconds = None
+        
+        # Look through bucket configs to find a JSON file with timestep_seconds
+        for bucket_config in bucket_configs:
+            bucket_timeseries = bucket_config['timeSeries']
+            
+            # Check waterOutputs first
+            if 'waterOutputs' in bucket_timeseries:
+                filename = bucket_timeseries['waterOutputs']['fileName']
+                filepath = os.path.join(data_folder, f"{filename}.csv")
+                
+                if os.path.exists(filepath):
+                    metadata = self.load_timeseries_metadata(filepath)
+                    if 'timestep_seconds' in metadata:
+                        timestep_seconds = metadata['timestep_seconds']
+                        break
+            
+            # If not found, check actualEvapotranspiration
+            if timestep_seconds is None and 'actualEvapotranspiration' in bucket_timeseries:
+                filename = bucket_timeseries['actualEvapotranspiration']['fileName']
+                filepath = os.path.join(data_folder, f"{filename}.csv")
+                
+                if os.path.exists(filepath):
+                    metadata = self.load_timeseries_metadata(filepath)
+                    if 'timestep_seconds' in metadata:
+                        timestep_seconds = metadata['timestep_seconds']
+                        break
+        
+        return timestep_seconds
+
+    def create_aggregated_timeseries(self, aggregated_data, name, location, timestep_seconds=None):
         """Create a TimeSeries object from aggregated data."""
         ts = TimeSeries(name=name)
         
@@ -189,6 +231,10 @@ class ModelAggregatorCLI:
         ts.add_metadata("description", f"Aggregated waterOutputs for {location}")
         ts.add_metadata("variables", ["runoffToReach", "actualEvapotranspiration"])
         ts.add_metadata("aggregation_level", "bucket_to_landcover" if "_" in location and location.count("_") == 2 else "landcover_to_subcatchment")
+        
+        # Add timestep_seconds if available
+        if timestep_seconds is not None:
+            ts.add_metadata("timestep_seconds", timestep_seconds)
         
         # Add data rows
         for row in aggregated_data:
@@ -361,6 +407,8 @@ class ModelAggregatorCLI:
             
             # Store landcover aggregated data for subcatchment aggregation
             landcover_aggregated_data = {}
+            # Extract timestep_seconds once per HRU (should be consistent)
+            hru_timestep_seconds = None
             
             # Level 1: Aggregate buckets to landcover types
             if create_landcover:
@@ -377,6 +425,14 @@ class ModelAggregatorCLI:
                     if not lc_timeseries or 'buckets' not in lc_timeseries['timeSeries']:
                         continue
                     
+                    # Extract timestep_seconds from first landcover if not already found
+                    if hru_timestep_seconds is None:
+                        hru_timestep_seconds = self.extract_timestep_seconds(
+                            lc_timeseries['timeSeries']['buckets'], data_folder
+                        )
+                        if hru_timestep_seconds and verbose:
+                            self.log_message(f"Found timestep_seconds: {hru_timestep_seconds}")
+                    
                     # Aggregate bucket data
                     aggregated_data = self.aggregate_buckets_to_landcover(
                         hru_name, landcover_name, lc_timeseries['timeSeries']['buckets'], 
@@ -388,7 +444,7 @@ class ModelAggregatorCLI:
                         location_name = f"{hru_name}_{landcover_name}"
                         ts_name = f"{hru_name}_{landcover_name}_waterOutputs"
                         
-                        ts = self.create_aggregated_timeseries(aggregated_data, ts_name, location_name)
+                        ts = self.create_aggregated_timeseries(aggregated_data, ts_name, location_name, hru_timestep_seconds)
                         
                         # Save TimeSeries to files
                         try:
@@ -414,7 +470,7 @@ class ModelAggregatorCLI:
                     location_name = f"{hru_name}_subcatchment"
                     ts_name = f"{hru_name}_subcatchment_waterOutputs"
                     
-                    ts = self.create_aggregated_timeseries(subcatchment_data, ts_name, location_name)
+                    ts = self.create_aggregated_timeseries(subcatchment_data, ts_name, location_name, hru_timestep_seconds)
                     
                     # Save TimeSeries to files
                     try:

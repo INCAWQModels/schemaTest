@@ -1,5 +1,5 @@
 {
-    "uuid": "86625d62-2497-499c-a55a-6d9441fff4cc",
+    "uuid": "8ad678da-15fb-47c2-9ef8-33f3ea277db1",
     "name": "Upper_Forest_waterOutputs",
     "location": "Upper_Forest",
     "description": "Aggregated waterOutputs for Upper_Forest",
@@ -7,5 +7,6 @@
         "runoffToReach",
         "actualEvapotranspiration"
     ],
-    "aggregation_level": "landcover_to_subcatchment"
+    "aggregation_level": "landcover_to_subcatchment",
+    "timestep_seconds": 86400
 }
