@@ -1,0 +1,11 @@
+{
+    "uuid": "c1557ae8-0c21-4c46-8145-bc4885f22075",
+    "name": "Upper_Agriculture_waterOutputs",
+    "location": "Upper_Agriculture",
+    "description": "Aggregated waterOutputs for Upper_Agriculture",
+    "variables": [
+        "runoffToReach",
+        "actualEvapotranspiration"
+    ],
+    "aggregation_level": "landcover_to_subcatchment"
+}

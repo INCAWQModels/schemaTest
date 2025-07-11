@@ -1,0 +1,11 @@
+{
+    "uuid": "905247b2-796d-40b7-9f20-92e9eee90f42",
+    "name": "Middle_Agriculture_waterOutputs",
+    "location": "Middle_Agriculture",
+    "description": "Aggregated waterOutputs for Middle_Agriculture",
+    "variables": [
+        "runoffToReach",
+        "actualEvapotranspiration"
+    ],
+    "aggregation_level": "landcover_to_subcatchment"
+}

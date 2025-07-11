@@ -1,0 +1,11 @@
+{
+    "uuid": "37439dc1-8093-4f4e-bbd1-3210bbd051ca",
+    "name": "Lower_subcatchment_waterOutputs",
+    "location": "Lower_subcatchment",
+    "description": "Aggregated waterOutputs for Lower_subcatchment",
+    "variables": [
+        "runoffToReach",
+        "actualEvapotranspiration"
+    ],
+    "aggregation_level": "landcover_to_subcatchment"
+}

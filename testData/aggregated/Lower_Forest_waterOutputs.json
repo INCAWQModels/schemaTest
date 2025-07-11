@@ -1,0 +1,11 @@
+{
+    "uuid": "65299bfb-9686-45d0-9f72-18c121392e1b",
+    "name": "Lower_Forest_waterOutputs",
+    "location": "Lower_Forest",
+    "description": "Aggregated waterOutputs for Lower_Forest",
+    "variables": [
+        "runoffToReach",
+        "actualEvapotranspiration"
+    ],
+    "aggregation_level": "landcover_to_subcatchment"
+}

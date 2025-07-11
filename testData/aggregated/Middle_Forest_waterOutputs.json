@@ -1,0 +1,11 @@
+{
+    "uuid": "7964dd40-f6d7-461b-aaea-6dcac2fa05b0",
+    "name": "Middle_Forest_waterOutputs",
+    "location": "Middle_Forest",
+    "description": "Aggregated waterOutputs for Middle_Forest",
+    "variables": [
+        "runoffToReach",
+        "actualEvapotranspiration"
+    ],
+    "aggregation_level": "landcover_to_subcatchment"
+}
