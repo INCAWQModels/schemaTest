@@ -20,7 +20,8 @@
     "reach": {
         "flow":                         { "$ref": "#/defs/timeSeries"},
         "abstraction":                  { "$ref": "#/defs/timeSeries"},
-        "effluent":                     { "$ref": "#/defs/timeSeries"}
+        "effluent":                     { "$ref": "#/defs/timeSeries"},
+        "dimensions":                   { "$ref": "#/defs/timeSeries"}
     }, 
     "subcatchment": {
         "solarRadiation":               { "$ref": "#/defs/timeSeries"},

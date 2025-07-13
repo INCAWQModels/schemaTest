@@ -31,6 +31,7 @@ class ModelTimeSeriesEditor:
         # Create GUI
         self.create_widgets()
         
+    
     def format_label_text(self, field_name):
         """Convert camelCase or snake_case field names to readable labels."""
         # Handle common abbreviations and special cases

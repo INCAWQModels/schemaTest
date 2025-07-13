@@ -276,6 +276,11 @@
               "fileName": "Upper_reach_effluent",
               "mandatory": false,
               "generated": true
+            },
+             "dimensions": {
+              "fileName": "Upper_reach_dimensions",
+              "mandatory": false,
+              "generated": true
             }
           }
         }
@@ -550,6 +555,11 @@
               "fileName": "Middle_reach_effluent",
               "mandatory": false,
               "generated": true
+            },
+             "dimensions": {
+              "fileName": "Middle_reach_dimensions",
+              "mandatory": false,
+              "generated": true
             }
           }
         }
@@ -822,6 +832,11 @@
             },
             "effluent": {
               "fileName": "Lower_reach_effluent",
+              "mandatory": false,
+              "generated": true
+            },
+             "dimensions": {
+              "fileName": "Lower_reach_dimensions",
               "mandatory": false,
               "generated": true
             }
